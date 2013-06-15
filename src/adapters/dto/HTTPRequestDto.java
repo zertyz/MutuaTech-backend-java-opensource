@@ -2,6 +2,7 @@ package adapters.dto;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 
 import adapters.HTTPClientAdapter;
 
@@ -55,5 +56,28 @@ public class HTTPRequestDto {
 	public String getHeader(String name) {
 		return headers.get(name);
 	}
+
+	@Override
+	public String toString() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("@HTTPRequestDto{headers={");
+		for (String headerName : headers.keySet()) {
+			sb.append(headerName);
+			sb.append("='");
+			sb.append(headers.get(headerName));
+			sb.append("',");
+		}
+		sb.append("}, parameters={");
+		for (String parameterName : parameters.keySet()) {
+			sb.append(parameterName);
+			sb.append("='");
+			sb.append(parameters.get(parameterName));
+			sb.append("',");
+		}
+		sb.append("}}");
+		return sb.toString();
+	}
+	
+	
 
 }
