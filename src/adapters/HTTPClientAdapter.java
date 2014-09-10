@@ -104,6 +104,7 @@ public class HTTPClientAdapter {
 	protected static HttpURLConnection buildConnection(String canonicalUrl, boolean doPost, HTTPRequestDto requestData) throws IOException {
 		URLInfo urlInfo = parseURLInfo(canonicalUrl);
         URL url = new URL(urlInfo.getConnectableURL());
+        HttpURLConnection.setFollowRedirects(FOLLOW_REDIRECTS);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         
         // process authentication data (if any)
@@ -117,7 +118,6 @@ public class HTTPClientAdapter {
         
         connection.setConnectTimeout(CONNECTION_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
-        connection.setFollowRedirects(FOLLOW_REDIRECTS);
         if (doPost) {
         	connection.setDoOutput(true);
         	connection.setRequestMethod("POST");
@@ -162,12 +162,12 @@ public class HTTPClientAdapter {
 
 	private static HTTPResponseDto buildResponseDto(HttpURLConnection connection) throws IOException {
 		byte[] contents = getContents(connection);
-		HTTPResponseDto response = new HTTPResponseDto(contents);
+		String responseMessage = connection.getResponseCode() + " " + connection.getResponseMessage();
+		HTTPResponseDto response = new HTTPResponseDto(responseMessage, contents);
+		// assemble headers
 		int n = 1;
-		System.out.println("Assembling response headers...");
 		while (true) {
 			String headerKey = connection.getHeaderFieldKey(n);
-			System.out.println(n + " -- " + headerKey);
 			if (headerKey == null) {
 				break;
 			}

@@ -20,9 +20,11 @@ public class HTTPResponseDto {
 	
 	private byte[] contents;
 	private Hashtable<String, ArrayList<String>> headers;
+	private String responseMessage;
 	
 	
-	public HTTPResponseDto(byte[] contents) {
+	public HTTPResponseDto(String responseMessage, byte[] contents) {
+		this.responseMessage = responseMessage;
 		this.contents = contents;
 		headers = new Hashtable<String, ArrayList<String>>();
 	}
@@ -42,6 +44,10 @@ public class HTTPResponseDto {
 		return headers;
 	}
 	
+	public String getResponseMessage() {
+		return responseMessage;
+	}
+	
 	public byte[] getContents() {
 		return contents;
 	}
@@ -50,7 +56,9 @@ public class HTTPResponseDto {
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
 
-		sb.append("@HTTPResponseDto{headers={");
+		sb.append("@HTTPResponseDto{responseMessage='");
+		sb.append(responseMessage);
+		sb.append("',headers={");
 		boolean showRootPreviousComma = false;
 		for (String headerName : headers.keySet()) {
 			if (showRootPreviousComma) {
