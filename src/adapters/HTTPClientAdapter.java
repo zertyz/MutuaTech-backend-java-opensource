@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import adapters.dto.HTTPRequestDto;
+import adapters.dto.HTTPResponseDto;
 import adapters.model.URLInfo;
 
 /**
@@ -41,8 +42,9 @@ public class HTTPClientAdapter {
 	** CONFIGURATION **
 	******************/
 	
-	protected static int CONNECTION_TIMEOUT = 30000;
-	protected static int READ_TIMEOUT       = 30000;
+	public static int     CONNECTION_TIMEOUT = 30000;	// miliseconds
+	public static int     READ_TIMEOUT       = 30000;	// also, ms
+	public static boolean FOLLOW_REDIRECTS   = true;
 	
 	
 	/*********************
@@ -115,6 +117,7 @@ public class HTTPClientAdapter {
         
         connection.setConnectTimeout(CONNECTION_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
+        connection.setFollowRedirects(FOLLOW_REDIRECTS);
         if (doPost) {
         	connection.setDoOutput(true);
         	connection.setRequestMethod("POST");
@@ -157,6 +160,24 @@ public class HTTPClientAdapter {
         return contentBytes;
 	}
 
+	private static HTTPResponseDto buildResponseDto(HttpURLConnection connection) throws IOException {
+		byte[] contents = getContents(connection);
+		HTTPResponseDto response = new HTTPResponseDto(contents);
+		int n = 1;
+		System.out.println("Assembling response headers...");
+		while (true) {
+			String headerKey = connection.getHeaderFieldKey(n);
+			System.out.println(n + " -- " + headerKey);
+			if (headerKey == null) {
+				break;
+			}
+			String headerValue = connection.getHeaderField(n);
+			response.addHeader(headerKey, headerValue);
+			n++;
+		}
+		return response;
+	}
+
 	
 	/*******************
 	** PUBLIC METHODS **
@@ -166,15 +187,15 @@ public class HTTPClientAdapter {
 	 *  perform the http request via the get method
 	 * @throws IOException
 	 */
-	public static byte[] requestGet(String url, HTTPRequestDto requestData) throws IOException {
+	public static HTTPResponseDto requestGet(String url, HTTPRequestDto requestData) throws IOException {
 		String queryString = buildParameterString(requestData);
 		HttpURLConnection connection = buildConnection(url+(queryString.equals("") ? "": "?")+queryString, false, requestData);
-        byte[] contents = getContents(connection);
-		return contents;
+        HTTPResponseDto response = buildResponseDto(connection);
+		return response;
 	}
 	
 	public static String requestGet(String url, HTTPRequestDto requestData, String charsetName) throws IOException {
-		return new String(requestGet(url, requestData), charsetName);
+		return new String(requestGet(url, requestData).getContents(), charsetName);
 	}
 	
 	/**
@@ -183,23 +204,24 @@ public class HTTPClientAdapter {
 	 * if 'outputData' is null, the parameters contained in 'requestData' will be sent to the output stream
 	 * @throws IOException
 	 */
-	public static byte[] requestPost(String url, HTTPRequestDto requestData, byte[] outputData) throws IOException {
+	public static HTTPResponseDto requestPost(String url, HTTPRequestDto requestData, byte[] outputData) throws IOException {
 		if (outputData == null) {
 			outputData = buildParameterString(requestData).getBytes();
 		}
 		HttpURLConnection connection = buildConnection(url, true, requestData);
 
-        // post the queryString
+        // post the queryString or 'outputData'
         OutputStream out = connection.getOutputStream();
         out.write(outputData);
         out.close();
-        
-        byte[] contents = getContents(connection);
-        return contents;
+
+        HTTPResponseDto response = buildResponseDto(connection);
+
+        return response;
 	}
 	
 	public static String requestPost(String url, HTTPRequestDto requestData, byte[] outputData, String charsetName) throws IOException {
-		return new String(requestPost(url, requestData, outputData), charsetName);
+		return new String(requestPost(url, requestData, outputData).getContents(), charsetName);
 	}
 	
 	/**

@@ -6,14 +6,14 @@ import java.util.Iterator;
 
 import adapters.HTTPClientAdapter;
 
-/**
+/** <pre>
  * HTTPRequestDto.java
  * ===================
  * (created by luiz, Dec 9, 2008)
  *
  * Represents the information to be sent by an HTTPClientAdapter request
  *
- * @see HTTPClientAdapter
+ * @see HTTPClientAdapter, HTTPResponseDto
  * @version $Id$
  * @author luiz
  */
@@ -60,19 +60,34 @@ public class HTTPRequestDto {
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
+		boolean showPreviousComma;
+
 		sb.append("@HTTPRequestDto{headers={");
+		showPreviousComma = false;
 		for (String headerName : headers.keySet()) {
+			if (showPreviousComma) {
+				sb.append(",");
+			} else {
+				showPreviousComma = true;
+			}
 			sb.append(headerName);
 			sb.append("='");
 			sb.append(headers.get(headerName));
-			sb.append("',");
+			sb.append("'");
 		}
+		sb.deleteCharAt(sb.length()-1);
 		sb.append("}, parameters={");
+		showPreviousComma = false;
 		for (String parameterName : parameters.keySet()) {
+			if (showPreviousComma) {
+				sb.append(",");
+			} else {
+				showPreviousComma = true;
+			}
 			sb.append(parameterName);
 			sb.append("='");
 			sb.append(parameters.get(parameterName));
-			sb.append("',");
+			sb.append("'");
 		}
 		sb.append("}}");
 		return sb.toString();
