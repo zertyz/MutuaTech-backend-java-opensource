@@ -1,6 +1,7 @@
 package servers.http;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -26,7 +27,7 @@ public class SimpleHTTPServer {
 	private static HttpServer server;
 	
 	// log := { {(String) uri, (long) request_millis, (Hashtable<String, String[]>) requestHeaders}, }
-	public static ArrayList<Object[]> log = null;
+	protected static ArrayList<Object[]> log = null;
 	
 	public static void start(int port, ISimpleHTTPServerHandler[] handlers) throws IOException {
         
@@ -50,9 +51,8 @@ public class SimpleHTTPServer {
         log = null;
 	}
 
-
 	// log requests handled by 'ISimpleHTTPServerHandler' instances
-	protected static void logRequest(String uri, long millis, Headers requestHeaders) {
+	public static void logRequest(String uri, long millis, Headers requestHeaders) {
 		// transform 'requestHeaders' into an array of arrays
 		Hashtable<String, String[]> requestHeadersHashtable = new Hashtable<String, String[]>();
 		for (String headerKey : requestHeaders.keySet()) {
@@ -61,4 +61,23 @@ public class SimpleHTTPServer {
 		}
 		log.add(new Object[] {uri, millis, requestHeadersHashtable});
 	}
+
+	public static void printLogs(PrintStream out) {
+		for (Object[] logEntry : SimpleHTTPServer.log) {
+			String uri                                 = (String) logEntry[0];
+			long millis                                = (Long) logEntry[1];
+			Hashtable<String, String[]> requestHeaders = (Hashtable<String, String[]>) logEntry[2];
+			String logLine = millis + " - Access to '"+uri+"' with headers: {";
+			for (String headerKey : requestHeaders.keySet()) {
+				logLine += "'"+headerKey+"': ";
+				for (String headerValue : requestHeaders.get(headerKey)) {
+					logLine += "'"+headerValue+"',";
+				}
+				logLine += "; ";
+			}
+			logLine += "}";
+			out.println(logLine);
+		}
+	}
+	
 }

@@ -1,13 +1,11 @@
 package adapters;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -126,25 +124,42 @@ public class HTTPClientAdapterTest {
 		System.out.println(response);
 		
 		// request log
-		for (Object[] logEntry : SimpleHTTPServer.log) {
-			String uri                                 = (String) logEntry[0];
-			long millis                                = (Long) logEntry[1];
-			Hashtable<String, String[]> requestHeaders = (Hashtable<String, String[]>) logEntry[2];
-			String logLine = millis + " - Access to '"+uri+"' with headers: {";
-			for (String headerKey : requestHeaders.keySet()) {
-				logLine += "'"+headerKey+"': ";
-				for (String headerValue : requestHeaders.get(headerKey)) {
-					logLine += "'"+headerValue+"',";
-				}
-				logLine += "; ";
-			}
-			logLine += "}";
-			System.out.println(logLine);
-		}
+		SimpleHTTPServer.printLogs(System.out);
 		
 		SimpleHTTPServer.stop();
 	}
 	
+	@Test(expected=FileNotFoundException.class)
+	public void testNotFoundResponse() throws IOException {
+		// try to fetch a not to be found item
+		String notToBeFoundURL = "http://google.com/nonexistentresource";
+		HTTPResponseDto notFoundResponse = HTTPClientAdapter.requestGet(notToBeFoundURL, null);
+		
+		System.out.println(notFoundResponse);
+
+	}
+	
+
+	@Test
+	public void testRedirectionResponse() throws IOException {
+		// try to fetch a URL that will respond as a redirection for another URL
+		boolean originalFollowRedirects = HTTPClientAdapter.FOLLOW_REDIRECTS;
+		try {
+			HTTPClientAdapter.FOLLOW_REDIRECTS = false;
+			String toBeRedirectedURL = "http://google.com";	// will be redirected to http://google.com.br/ throw HTTP 302 Found response
+			String expectedRedirectionPattern = "http://www.google.com.br/.*";
+			HTTPResponseDto toBeRedirectedResponse = HTTPClientAdapter.requestGet(toBeRedirectedURL, null);
+			List<String> observedRedirections = toBeRedirectedResponse.getHeaders().get("Location");
+			assertNotNull("No redirection detected", observedRedirections);
+			String observedRedirection = observedRedirections.get(0);
+			assertTrue("expected redirection pattern '"+expectedRedirectionPattern+"' is not contained into observed redirection string '"+observedRedirection+"'", "matched".equals(observedRedirection.replaceAll(expectedRedirectionPattern, "matched")));
+			
+			System.out.println(toBeRedirectedURL + " - " + toBeRedirectedResponse);
+		} finally {
+			HTTPClientAdapter.FOLLOW_REDIRECTS = originalFollowRedirects;
+		}
+
+	}
 
 	/**************************
 	** ERROR CONDITION TESTS **
@@ -152,14 +167,24 @@ public class HTTPClientAdapterTest {
 	
 	@Test(expected=SocketTimeoutException.class)
 	public void testConnectionTimeout() throws IOException {
-		HTTPClientAdapter.CONNECTION_TIMEOUT = 10;
-		HTTPClientAdapter.requestGet("http://gizmodo.com/5041005/earths-most-distant-web-cam-pics-went-live-this-week", null);
+		int originalTimeout = HTTPClientAdapter.CONNECTION_TIMEOUT;
+		try {
+			HTTPClientAdapter.CONNECTION_TIMEOUT = 10;
+			HTTPClientAdapter.requestGet("http://gizmodo.com/5041005/earths-most-distant-web-cam-pics-went-live-this-week", null);
+		} finally {
+			HTTPClientAdapter.CONNECTION_TIMEOUT = originalTimeout;
+		}
 	}
 	
 	@Test(expected=SocketTimeoutException.class)
 	public void testReadTimeout() throws IOException {
-		HTTPClientAdapter.READ_TIMEOUT = 10;
-		HTTPClientAdapter.requestGet("http://mail.mundivox.com:25", null);
+		int originalTimeout = HTTPClientAdapter.READ_TIMEOUT;
+		try {
+			HTTPClientAdapter.READ_TIMEOUT = 10;
+			HTTPClientAdapter.requestGet("http://mail.mundivox.com:25", null);
+		} finally {
+			HTTPClientAdapter.READ_TIMEOUT = originalTimeout;
+		}
 	}
 
 }
