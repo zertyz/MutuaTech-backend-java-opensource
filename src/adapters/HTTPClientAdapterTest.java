@@ -6,10 +6,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.Hashtable;
 
 import org.junit.Test;
 
+import servers.http.ISimpleHTTPServerHandler;
+import servers.http.SimpleHTTPServer;
 import adapters.dto.HTTPRequestDto;
+import adapters.dto.HTTPResponseDto;
 import adapters.model.URLInfo;
 
 /**
@@ -25,6 +30,7 @@ import adapters.model.URLInfo;
  */
 
 public class HTTPClientAdapterTest {
+	
 
 	/***********************
 	** NORMAL USAGE TESTS **
@@ -96,6 +102,47 @@ public class HTTPClientAdapterTest {
 			assertFalse("'hasAuthenticationData' should be false", observedURLInfo.hasAuthenticationData());
 		}
 		
+	}
+	
+	@Test
+	public void localServerTest() throws IOException, InterruptedException {
+		
+		// setup the server
+		SimpleHTTPServer.start(8080, new ISimpleHTTPServerHandler[] {
+			ISimpleHTTPServerHandler.getStaticHandler("/test", new String[][] {{"myheader",  "myvalue1"}, {"myheader", "myvalue2"}}, "This is the response".getBytes()),
+		});
+		String url = "http://localhost:8080/test";
+		
+		//Thread.sleep(60000);
+		
+		// setup the client
+		HTTPRequestDto request = new HTTPRequestDto();
+		request.addHeader("h1", "h1v1");
+		request.addHeader("h2", "h2v1");
+		request.addHeader("h1", "h1v2");
+		HTTPResponseDto response = HTTPClientAdapter.requestGet(url, request);
+		
+		System.out.println(request);
+		System.out.println(response);
+		
+		// request log
+		for (Object[] logEntry : SimpleHTTPServer.log) {
+			String uri                                 = (String) logEntry[0];
+			long millis                                = (Long) logEntry[1];
+			Hashtable<String, String[]> requestHeaders = (Hashtable<String, String[]>) logEntry[2];
+			String logLine = millis + " - Access to '"+uri+"' with headers: {";
+			for (String headerKey : requestHeaders.keySet()) {
+				logLine += "'"+headerKey+"': ";
+				for (String headerValue : requestHeaders.get(headerKey)) {
+					logLine += "'"+headerValue+"',";
+				}
+				logLine += "; ";
+			}
+			logLine += "}";
+			System.out.println(logLine);
+		}
+		
+		SimpleHTTPServer.stop();
 	}
 	
 
