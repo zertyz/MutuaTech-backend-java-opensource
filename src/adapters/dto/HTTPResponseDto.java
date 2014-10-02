@@ -88,7 +88,7 @@ public class HTTPResponseDto {
 		} catch (UnsupportedEncodingException e) {
 			contents = new String(getContents());
 		}
-		sb.append(contents.replaceAll("\n", "\\n").replaceAll("\r", "\\r"));
+		sb.append(contents.replaceAll("\n", "\\\\n").replaceAll("\r", "\\\\r"));
 		sb.append("]]}");
 		return sb.toString();
 	}

@@ -75,7 +75,6 @@ public class HTTPRequestDto {
 			sb.append(headers.get(headerName));
 			sb.append("'");
 		}
-		sb.deleteCharAt(sb.length()-1);
 		sb.append("}, parameters={");
 		showPreviousComma = false;
 		for (String parameterName : parameters.keySet()) {
