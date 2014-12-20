@@ -1,0 +1,10 @@
+Mutua General Purpose Peer-to-Peer Communications
+=================================================
+
+This is the base infrastructure for all node communications between services and machines.
+
+We use a P2P communication approach, rather than a Client-Server one because it is more
+flexible (for scenarios were it is not clear who is serving who) and are better suited
+for work distribution among different nodes on a ever changing and ever growing network.
+
+For more documentation, please refer to 'MutuaGPP2PCommunicationsTests' project.
