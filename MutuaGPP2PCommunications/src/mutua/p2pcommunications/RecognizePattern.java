@@ -11,10 +11,10 @@ import java.lang.annotation.Target;
  * =====================
  * (created by luiz, Dec 20, 2014)
  *
- * This annotation holds the information of which regular expression should a protocol message match
- * in order to consider that the API method using this annotation is the one to process the message
+ * Annotation that holds the information of which regular expression should a protocol message match
+ * in order to consider the annotated 'P2PServicesAPI' method the one to process the request
  *
- * @see RelatedClass(es)
+ * @see P2PServicesAPI
  * @version $Id$
  * @author luiz
  */
@@ -24,6 +24,7 @@ import java.lang.annotation.Target;
 @Documented
 public @interface RecognizePattern {
 
+	/** The pattern that activate this method */
 	String value();
 	// Pattern compiledPattern default new Pattern(value()) may it increase performance?
 
