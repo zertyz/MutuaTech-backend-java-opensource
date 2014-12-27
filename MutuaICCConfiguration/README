@@ -1,0 +1,39 @@
+Mutua Instrumentation, Configuration and Control -- Configuration low level component
+=====================================================================================
+
+This project is the low level Configuration component of the MutuaICC library and it is
+designed to provide applications, libraries and modules an unified and centralized way
+of providing configuration for all project's components.
+
+The strategy
+------------
+	Each application, framework, platform or whatsoever piece of deliverable software
+	one is producing that needs to use the Configuration framework, should implement an
+	specialized version of the corresponding config.*Configuration class, which should
+	make the necessary adjusts of each class -- for instance, setting constants and the
+	like. Please see the tests project for examples.
+
+The data sources
+----------------
+	The most obvious data source is to place values directly into the specialized
+	config.*Configuration class (this is called HardSource data source and there is no
+	need for an implementation in order to use this feature). Other data sources are:
+	1) PropertiesFileConfigurationDataSource
+	2) XMLConfigurationDataSource
+	3) GoogleDocsConfigurationDataSource
+	4) DatabaseConfigurationDataSource
+	5) MutuaP2PCommunicationsConfigurationDataSource
+	6) HTTPConfigurationDataSource
+	
+	Adding to that, data sources may be static or dynamic -- which should allow some or
+	all configuration to be reloaded base on events -- triggered by timespan or other
+	actions (like a local file change, new database record or P2PServicesAPI event).
+
+Additional features
+-------------------
+	It might be possible for this configuration approach to allow some online licensing
+	control -- a special P2PServicesAPI designed to operate over an encrypted channel
+	may be used to set a configuration on every boot -- or every month -- setting the
+	state "is license valid?" -- although an special project would better suit this.
+
+Please refer to 'MutuaICCConfigurationTests' for more documentation

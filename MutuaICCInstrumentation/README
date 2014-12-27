@@ -1,0 +1,45 @@
+Mutua Instrumentation, Configuration and Control -- Instrumentation low level component
+=======================================================================================
+
+Allow software units to instrument and measure their execution by providing them a common
+front end that provides the tasks:
+	- Register debug, info, error and log messages
+	- Register requests (SMS, Console, Queue Service, Web or anything that starts the
+	  execution of a process) with trackeable information
+	- Detect malfunctions, routing them to the appropriate alarm system (using
+	  MutuaNotificationServices)
+	- Compute, quantify and measure the amount of work done per unit of time and minimum
+	  maximum and average time needed to conclude a transaction (InstantStatistics)
+
+About Operations Transactions and Requests
+------------------------------------------
+	Earlier versions of this module used different entities to represent those 3 types of
+	events. On this version, everything is called and "event". A tree-like structure is, then,
+	used to differentiate between them: operations are events that triggers no other events,
+	while transactions are a set of operations; requests are events annotated as such.
+
+Event-like plugin archtecture
+-----------------------------
+	Since all instrumented operations, transactions and requests are events, other libs,
+	like the "MutuaKPIRegister", may listen to those events in order to build their own
+	database of events.
+
+Event data structure and logging information gathering
+------------------------------------------------------
+	Since we have a central point for defining the events hierarchy, this same point have
+	some annotation about these events -- like what variables should be passed along with
+	it (maybe an enumeration instantiating a subclass of itself may provide the correct
+	method signature?). These annotations may also include what type of important event
+	each entry represent: Request? Churn? Subscription? Payment? Product specific
+	operation (which should extensible...) ?
+
+Log Syncs
+---------
+	In addition to stdout, file, database, queues, tee and possibly others, also a
+	P2PServicesAPI may be used as a log sync, as well as compressors and file rotators
+	for the file sync.
+
+InstantStatistics
+-----------------
+	The InstantStatistics may keep some information in RAM, waiting for a consumer peer
+	to connect and start receiving the events.

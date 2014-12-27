@@ -7,4 +7,22 @@ We use a P2P communication approach, rather than a Client-Server one because it 
 flexible (for scenarios were it is not clear who is serving who) and are better suited
 for work distribution among different nodes on a ever changing and ever growing network.
 
+Versioning
+----------
+	Each P2PServicesAPI specialization should define a P2PServiceAndVersionId string that
+	will be used by peers in order to verify they are able to communicate to one another.
+
+Multiple Service APIs per peer
+------------------------------
+	When starting the Peer Service, through P2PServicesNode, multiple specializations of
+	P2PServicesAPI may be provided, allowing a single peer instance to provide multiple
+	services by multiple different modules that, possibly, are unaware of each other.
+
+Multiple Communication Channels
+-------------------------------
+	The most obvious communication channel is TCP -- although others may be used, like
+	a queue -- but, even for TCP, the communication can be done in binary, plain text,
+	encrypted, compressed... When using encryption, a good choice could be using the
+	application or framework 'VERSION_ID' information, as defined in MutuaICC package.
+
 For more documentation, please refer to 'MutuaGPP2PCommunicationsTests' project.
