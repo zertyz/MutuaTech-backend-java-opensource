@@ -18,8 +18,8 @@ About Operations Transactions and Requests
 	used to differentiate between them: operations are events that triggers no other events,
 	while transactions are a set of operations; requests are events annotated as such.
 
-Event-like plugin archtecture
------------------------------
+Event-like plugin architecture
+------------------------------
 	Since all instrumented operations, transactions and requests are events, other libs,
 	like the "MutuaKPIRegister", may listen to those events in order to build their own
 	database of events.

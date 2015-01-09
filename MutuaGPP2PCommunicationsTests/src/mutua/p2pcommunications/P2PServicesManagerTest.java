@@ -110,8 +110,8 @@ System.out.println("Found on output stream: "+new String(outputContent));
 	@Test
 	public void customP2PServicesOverACommunicationChannelTest() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, IOException, InterruptedException {
 		
-		byte[] peer1Buffer = new byte[40960];
-		byte[] peer2Buffer = new byte[40960];
+		final byte[] peer1Buffer = new byte[40960];
+		final byte[] peer2Buffer = new byte[40960];
 		InputStream  peer1InputStream  = new InputStream() {
 			int pos = 0;
 			public int read() throws IOException {
