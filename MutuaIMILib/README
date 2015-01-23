@@ -1,0 +1,7 @@
+Mutua Indirect Method Invocation Library
+========================================
+
+Framework do deal with reflexive method calls, serializable or not.
+
+Used when the caller don't know anything about the implementation (possibly, not even the interface),
+on scenarios like: event dispatching, client-server or P2P nodes communications.

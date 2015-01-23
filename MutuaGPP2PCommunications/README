@@ -26,3 +26,9 @@ Multiple Communication Channels
 	application or framework 'VERSION_ID' information, as defined in MutuaICC package.
 
 For more documentation, please refer to 'MutuaGPP2PCommunicationsTests' project.
+
+- Some philosofy describing client-pull / server-push models: http://www.cs101.org/ipij/push.html
+  Here, what they call client-pull server and server-push client, I call P2P and I guess I don't
+  need a "Dropbox", although a queue seems to fit perfect for asyncs...
+- Possibly we may consider using the EventAdapter pattern -- ClientAdapter implements stub server
+  funcions and vice-versa
