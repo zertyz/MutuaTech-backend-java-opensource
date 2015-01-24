@@ -1,5 +1,7 @@
 package mutua.icc.instrumentation;
 
+import mutua.serialization.ISerializationRule;
+
 /** <pre>
  * InstrumentationProperties.java
  * ==============================
@@ -12,18 +14,56 @@ package mutua.icc.instrumentation;
  * @author luiz
  */
 
-public class InstrumentationProperties {
+public enum InstrumentationProperties implements IInstrumentableProperty {
 	
-	public static IInstrumentableProperty<String> DAY_OF_WEEK = new IInstrumentableProperty<String>("dayOfWeek", String.class);
 	
-	public static IInstrumentableProperty<TestType> MAIL = new IInstrumentableProperty<TestType>("mail", TestType.class) {
-
+	DAY_OF_WEEK("dayOfWeek", String.class),
+	
+	MAIL("mail", TestType.class) {
 		@Override
-		public void appendValueToLogLine(StringBuffer logLine, TestType value) {
-			logLine.append("from='").append(value.from).append("',").
-			append("to='").append(value.to).append("'");
+		public void appendSerializedValue(StringBuffer logLine, Object value) {
+			TestType mail = (TestType)value;
+			logLine.append("from='").append(mail.from).append("',").
+			append("to='").append(mail.to).append("'");
 		}
-		
-	};
+	}
+
+	
+	;
+
+	
+	private String instrumentationPropertyName;
+	private Class<?> instrumentationPropertyType;
+	
+	
+	private InstrumentationProperties(String instrumentationPropertyName, Class<?> instrumentationPropertyType) {
+		this.instrumentationPropertyName = instrumentationPropertyName;
+		this.instrumentationPropertyType = instrumentationPropertyType;
+	}
+
+	
+	// IInstrumentableProperty implementation
+	/////////////////////////////////////////
+	
+	@Override
+	public String getInstrumentationPropertyName() {
+		return instrumentationPropertyName;
+	}
+
+	
+	// ISerializationRule implementation
+	////////////////////////////////////
+	
+	@Override
+	public Class<?> getType() {
+		return instrumentationPropertyType;
+	}
+
+	@Override
+	public void appendSerializedValue(StringBuffer buffer, Object value) {
+		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
+                                   "' didn't overrode 'appendSerializedValue' from " +
+                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	}
 
 }

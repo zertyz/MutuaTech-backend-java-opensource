@@ -14,14 +14,37 @@ import static mutua.icc.instrumentation.DefaultInstrumentationProperties.*;
  * @author luiz
  */
 
-public class DefaultInstrumentationEvents {
+public enum DefaultInstrumentationEvents implements IInstrumentableEvent {
 
-	public static IInstrumentableEvent DIE_APP_START           = new IInstrumentableEvent("APP_START");
-	public static IInstrumentableEvent DIE_APP_SHUTDOWN        = new IInstrumentableEvent("APP_SHUTDOWN");
-	public static IInstrumentableEvent DIE_UNCOUGHT_EXCEPTION  = new IInstrumentableEvent("UNCOUGHT_EXCEPTION", DIP_MSG, DIP_THROWABLE);
-	public static IInstrumentableEvent DIE_REPORTED_THROWABLE  = new IInstrumentableEvent("REPORTED_THROWABLE", DIP_MSG, DIP_THROWABLE);
-	public static IInstrumentableEvent DIE_ERROR               = new IInstrumentableEvent("ERROR",              DIP_MSG);
-	public static IInstrumentableEvent DIE_WARNING             = new IInstrumentableEvent("WARNING",            DIP_MSG);
-	public static IInstrumentableEvent DIE_DEBUG               = new IInstrumentableEvent("DEBUG",              DIP_MSG);
-		
+	
+	DIE_APP_START          ("APP_START"),
+	DIE_APP_SHUTDOWN       ("APP_SHUTDOWN"),
+	DIE_UNCOUGHT_EXCEPTION ("UNCOUGHT_EXCEPTION", DIP_MSG, DIP_THROWABLE),
+	DIE_REPORTED_THROWABLE ("REPORTED_THROWABLE", DIP_MSG, DIP_THROWABLE),
+	DIE_ERROR              ("ERROR",              DIP_MSG),
+	DIE_WARNING            ("WARNING",            DIP_MSG),
+	DIE_DEBUG              ("DEBUG",              DIP_MSG),
+	
+	
+	;
+	
+	
+	private InstrumentableEvent instrumentableEvent;
+	
+	private DefaultInstrumentationEvents(String name, IInstrumentableProperty property) {
+		instrumentableEvent = new InstrumentableEvent(name, property);
+	}
+	
+	private DefaultInstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
+	}
+	
+	private DefaultInstrumentationEvents(String name) {
+		instrumentableEvent = new InstrumentableEvent(name);
+	}
+
+	@Override
+	public InstrumentableEvent getInstrumentableEvent() {
+		return instrumentableEvent;
+	}
 }

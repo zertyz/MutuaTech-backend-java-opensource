@@ -19,7 +19,7 @@ import org.junit.Test;
 
 public class InstrumentationTests {
 	
-	private static Instrumentation<InstrumentationTestRequestProperty, String> log = new Instrumentation<InstrumentationTestRequestProperty, String>("InstrumentationTests", new InstrumentationTestRequestProperty("testProcedure"));
+	private static Instrumentation<InstrumentationTestRequestProperty, String> log = new Instrumentation<InstrumentationTestRequestProperty, String>("InstrumentationTests", new InstrumentationTestRequestProperty("testProcedure"), InstrumentationEvents.values());
 	
 	@Test
 	public void simpleTest() {

@@ -1,5 +1,7 @@
 package mutua.icc.instrumentation;
 
+import mutua.serialization.ISerializationRule;
+
 /** <pre>
  * IInstrumentableProperty.java
  * ============================
@@ -12,29 +14,9 @@ package mutua.icc.instrumentation;
  * @author luiz
  */
 
-public class IInstrumentableProperty<T> {
+public interface IInstrumentableProperty extends ISerializationRule {
 	
-	private final String name;
-	private final Class<?> type;
+	/** Returns the name of the property */
+	String getInstrumentationPropertyName();
 	
-	public IInstrumentableProperty(String name, Class<?> type) {
-		this.name = name;
-		this.type = type;
-	}
-	
-	/** The name of the property */
-	public String getName() {
-		return name;
-	}
-	
-	/** The value data type of the property */
-	public Class<?> getType() {
-		return type;
-	}
-
-	/** This class should be overwritten for custom property types */
-	public void appendValueToLogLine(StringBuffer logLine, T value) {
-		throw new RuntimeException("Don't know how to log event property '"+name+"' of type '"+type+"'");
-	}
-
 }

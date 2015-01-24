@@ -40,10 +40,9 @@ public enum SerializationRules implements ISerializationRule {
 
 	@Override
 	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("Class " + this.getClass().getName() +
-		                            " doesn't know how to serialize type '" + type +
-		                            "' -- it needs to override the 'appendSerializedValue' " +
-		                            "method of 'ISerializationRule'");
+		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
+		                            "' didn't overrode 'appendSerializedValue' from " +
+		                            "'ISerializationRule' for type '" + type);
 	}
 
 }

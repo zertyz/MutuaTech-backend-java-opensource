@@ -22,10 +22,9 @@ public interface ISerializationRule<T> {
 	
 	/** Responsible for appending to 'buffer' the serialized data that represents 'value'.
 	 * Recommendation: use the following for the default implementation:
-	 * throw new RuntimeException("Class " + this.getClass().getName() +
-	 *                            " doesn't know how to serialize type '" + type +
-	 *                            "' -- it needs to override the 'appendSerializedValue' " +
-	 *                            "method of 'ISerializationRule'"); */
+	 * throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
+	                              "' didn't overrode 'appendSerializedValue' from " +
+	                              "'ISerializationRule' for type '" + type); */
 	void appendSerializedValue(StringBuffer buffer, T value);
 
 }

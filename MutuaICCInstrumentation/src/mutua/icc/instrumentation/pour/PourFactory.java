@@ -1,5 +1,7 @@
 package mutua.icc.instrumentation.pour;
 
+import mutua.icc.instrumentation.IInstrumentableProperty;
+
 /** <pre>
  * PourFactory.java
  * ================
@@ -26,26 +28,20 @@ public class PourFactory {
 	// configurable values
 	public static EInstrumentationDataPours DEFAULT_POUR = EInstrumentationDataPours.CONSOLE;
 	
-	private static final PourFactory[] instances;
-	
-	static {
-		// build the multiton instances
-		instances = new PourFactory[EInstrumentationDataPours.values().length];
-		instances[EInstrumentationDataPours.RAM.ordinal()]     = new PourFactory(EInstrumentationDataPours.RAM);
-		instances[EInstrumentationDataPours.CONSOLE.ordinal()] = new PourFactory(EInstrumentationDataPours.CONSOLE);
-	}
+	private static final PourFactory[] instances = new PourFactory[EInstrumentationDataPours.values().length];
+
 	
 	private IInstrumentationPour ip;
 	
 	
-	private PourFactory(EInstrumentationDataPours pour) {
+	private PourFactory(EInstrumentationDataPours pour, IInstrumentableProperty[] instrumentationProperties) {
 		
 		switch (pour) {
 			case RAM:
 				ip = new mutua.icc.instrumentation.pour.ram.InstrumentationPour();
 				break;
 			case CONSOLE:
-				ip = new mutua.icc.instrumentation.pour.console.InstrumentationPour();
+				ip = new mutua.icc.instrumentation.pour.console.InstrumentationPour(instrumentationProperties);
 				break;
 			case DATABASE:
 			case ROLLING_FILE:
@@ -57,8 +53,17 @@ public class PourFactory {
 		
 	}
 
-	public static IInstrumentationPour getInstrumentationPour() {
-		return instances[EInstrumentationDataPours.CONSOLE.ordinal()].ip;
+	public static IInstrumentationPour getInstrumentationPour(EInstrumentationDataPours pour, IInstrumentableProperty[] instrumentationProperties) {
+		if (instances[pour.ordinal()] != null) {
+			return instances[pour.ordinal()].ip;
+		} else {
+			instances[pour.ordinal()] = new PourFactory(pour, instrumentationProperties);
+			return getInstrumentationPour(pour, instrumentationProperties);
+		}
+	}
+
+	public static IInstrumentationPour getInstrumentationPour(IInstrumentableProperty[] instrumentationProperties) {
+		return getInstrumentationPour(DEFAULT_POUR, instrumentationProperties);
 	}
 	
 }

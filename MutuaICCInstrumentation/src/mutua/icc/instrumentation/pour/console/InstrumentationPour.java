@@ -3,10 +3,12 @@ package mutua.icc.instrumentation.pour.console;
 import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 
-import mutua.icc.instrumentation.IInstrumentableEvent;
+import mutua.icc.instrumentation.InstrumentableEvent;
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.dto.EventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
+import mutua.serialization.ISerializationRule;
+import mutua.serialization.SerializationRepository;
 
 /** <pre>
  * InstrumentationPour.java
@@ -22,25 +24,75 @@ import mutua.icc.instrumentation.pour.IInstrumentationPour;
 
 public class InstrumentationPour extends IInstrumentationPour {
 
+		
+	private ISerializationRule<EventDto> logEventDtoSerializationRule = new ISerializationRule<EventDto>() {
+
+		private SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd|HH:mm:ss.SSS|zzz");
+		private FieldPosition fp = new FieldPosition(0);
+
+		@Override
+		public Class<EventDto> getType() {
+			return EventDto.class;
+		}
+
+		@Override
+		public void appendSerializedValue(StringBuffer buffer, EventDto logEvent) {
+			long currentTimeMillis                                  = logEvent.getCurrentTimeMillis();
+			String applicationName                                  = logEvent.getApplicationName();
+			String threadInfo                                       = logEvent.getThreadInfo();
+			InstrumentableEvent instrumentableEvent                = logEvent.getEvent();
+			IInstrumentableProperty[] instrumentableEventProperties = instrumentableEvent.getProperties();
+			sdf.format(currentTimeMillis, buffer, fp);
+			buffer.append("|").append(currentTimeMillis).append(", ").
+			append(applicationName).append('-').append(threadInfo).append(": ").
+			append(instrumentableEvent.getName());
+			if (instrumentableEventProperties.length > 0) {
+				buffer.append(" {");
+				for (int i=0; i<instrumentableEventProperties.length; i++) {
+					IInstrumentableProperty instrumentableProperty = instrumentableEventProperties[i];
+					buffer.append(instrumentableProperty.getInstrumentationPropertyName()).append(" = ");
+					Object logEventPropertyValue = logEvent.getValue(instrumentableProperty);
+					Class<?> type = instrumentableProperty.getType();
+					if ((type == Integer.TYPE) || (type == Long.TYPE)) {
+						serializer.serialize(buffer, logEventPropertyValue);
+					} else if (type == String.class) {
+						buffer.append('"');
+						serializer.serialize(buffer, logEventPropertyValue);
+						buffer.append('"');
+					} else {
+						buffer.append('{');
+						serializer.serialize(buffer, logEventPropertyValue);
+						buffer.append('}');
+					}
+					if (i < (instrumentableEventProperties.length-1)) {
+						buffer.append(", ");
+					}
+				}
+				buffer.append("}");
+			}
+		}
+		
+	};
+
+	private SerializationRepository serializer;
 	
-	
-	
-	/*******************
-	** HELPER METHODS **
-	*******************/
-	
-	
-	
-	/****************************************
-	** IInstrumentationData IMPLEMENTATION **
-	****************************************/
-	
+	public InstrumentationPour(IInstrumentableProperty[] instrumentationProperties) {
+		serializer = new SerializationRepository(instrumentationProperties); 
+		serializer.addSerializationRule(logEventDtoSerializationRule);
+	}
+
+
+	// IInstrumentationPour implementation
+	//////////////////////////////////////
+
 	@Override
 	public void reset() {}
 
 	@Override
 	public void storeInstrumentableEvent(EventDto event) {
-		System.out.println(event.toString());
+		StringBuffer logLine = new StringBuffer();
+		serializer.serialize(logLine, event);
+		System.out.println(logLine);
 	}
 
 	@Override

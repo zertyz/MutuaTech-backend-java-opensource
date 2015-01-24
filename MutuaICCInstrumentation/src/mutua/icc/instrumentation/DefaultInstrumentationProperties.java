@@ -17,13 +17,15 @@ import java.io.Writer;
  * @author luiz
  */
 
-public class DefaultInstrumentationProperties {
+public enum DefaultInstrumentationProperties implements IInstrumentableProperty {
 
-	public static IInstrumentableProperty<String>    DIP_MSG       = new IInstrumentableProperty<String>("msg", String.class);
 	
-	public static IInstrumentableProperty<Throwable> DIP_THROWABLE = new IInstrumentableProperty<Throwable>("stackTrace", Throwable.class) {
+	DIP_MSG("msg", String.class),
+	
+	DIP_THROWABLE("stackTrace", Throwable.class) {
 		@Override
-		public void appendValueToLogLine(final StringBuffer logLine, Throwable value) {
+		public void appendSerializedValue(final StringBuffer logLine, Object value) {
+			Throwable t = (Throwable)value;
 			PrintWriter pw = new PrintWriter(new Writer() {
 				@Override
 				public void write(char[] cbuf, int off, int len) throws IOException {
@@ -36,10 +38,47 @@ public class DefaultInstrumentationProperties {
 				
 			});
 			logLine.append('"');
-			value.printStackTrace(pw);
+			t.printStackTrace(pw);
 			logLine.append('"');
 		}
-		
-	};
+	},
+	
+	
+	;
+
+	
+	private String instrumentationPropertyName;
+	private Class<?> instrumentationPropertyType;
+	
+	
+	private DefaultInstrumentationProperties(String instrumentationPropertyName, Class<?> instrumentationPropertyType) {
+		this.instrumentationPropertyName = instrumentationPropertyName;
+		this.instrumentationPropertyType = instrumentationPropertyType;
+	}
+
+	
+	// IInstrumentableProperty implementation
+	/////////////////////////////////////////
+	
+	@Override
+	public String getInstrumentationPropertyName() {
+		return instrumentationPropertyName;
+	}
+
+	
+	// ISerializationRule implementation
+	////////////////////////////////////
+	
+	@Override
+	public Class<?> getType() {
+		return instrumentationPropertyType;
+	}
+
+	@Override
+	public void appendSerializedValue(StringBuffer buffer, Object value) {
+		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
+                                   "' didn't overrode 'appendSerializedValue' from " +
+                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	}
 
 }

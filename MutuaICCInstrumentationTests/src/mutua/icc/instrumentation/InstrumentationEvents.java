@@ -14,10 +14,35 @@ import static mutua.icc.instrumentation.InstrumentationProperties.*;
  * @author luiz
  */
 
-public class InstrumentationEvents {
+public enum InstrumentationEvents implements IInstrumentableEvent {
 	
-	public static IInstrumentableEvent NOPROP_EVENT  = new IInstrumentableEvent("NOPROP_EVENT");
-	public static IInstrumentableEvent ONEPROP_EVENT = new IInstrumentableEvent("ONEPROP_EVENT", DAY_OF_WEEK);
-	public static IInstrumentableEvent TWOPROP_EVENT = new IInstrumentableEvent("TWOPROP_EVENT", DAY_OF_WEEK, MAIL);
+	
+	NOPROP_EVENT  ("NOPROP_EVENT"),
+	ONEPROP_EVENT ("ONEPROP_EVENT", DAY_OF_WEEK),
+	TWOPROP_EVENT ("TWOPROP_EVENT", DAY_OF_WEEK, MAIL),
+
+	
+	;
+	
+	
+	private InstrumentableEvent instrumentableEvent;
+	
+	private InstrumentationEvents(String name, IInstrumentableProperty property) {
+		instrumentableEvent = new InstrumentableEvent(name, property);
+	}
+	
+	private InstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
+	}
+	
+	private InstrumentationEvents(String name) {
+		instrumentableEvent = new InstrumentableEvent(name);
+	}
+
+	@Override
+	public InstrumentableEvent getInstrumentableEvent() {
+		return instrumentableEvent;
+	}
+
 
 }

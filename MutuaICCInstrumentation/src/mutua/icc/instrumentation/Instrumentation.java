@@ -1,12 +1,17 @@
 package mutua.icc.instrumentation;
 
-import static mutua.icc.instrumentation.DefaultInstrumentationEvents.*;
-import static mutua.icc.instrumentation.DefaultInstrumentationProperties.*;
+import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_APP_SHUTDOWN;
+import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_APP_START;
+import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_REPORTED_THROWABLE;
+import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_UNCOUGHT_EXCEPTION;
+import static mutua.icc.instrumentation.DefaultInstrumentationProperties.DIP_MSG;
+import static mutua.icc.instrumentation.DefaultInstrumentationProperties.DIP_THROWABLE;
 
-import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.WeakHashMap;
+
+import org.apache.jk.config.IISConfig;
 
 import mutua.icc.instrumentation.dto.EventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
@@ -25,21 +30,21 @@ import mutua.icc.instrumentation.pour.PourFactory;
  * @author luiz
  */
 
-public class Instrumentation<P extends IInstrumentableProperty<?>, R> {
+public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProperty, REQUEST_TYPE> {
 	
 	
 	// data structures
 	//////////////////
 	
 	private String APPLICATION_NAME;
-	private P requestProperty;
+	private REQUEST_PROPERTY_TYPE requestProperty;
 	
-	private IInstrumentableEvent UNFINISHED_REQUEST_EVENT;
-	private IInstrumentableEvent REQUEST_START_EVENT;
-	private IInstrumentableEvent REQUEST_FINISH_EVENT;
+	private InstrumentableEvent UNFINISHED_REQUEST_EVENT;
+	private InstrumentableEvent REQUEST_START_EVENT;
+	private InstrumentableEvent REQUEST_FINISH_EVENT;
 
 	
-	private WeakHashMap<Thread, R> ongoingRequests = new WeakHashMap<Thread, R>();
+	private WeakHashMap<Thread, REQUEST_TYPE> ongoingRequests = new WeakHashMap<Thread, REQUEST_TYPE>();
 	
 	UncaughtExceptionHandler ueh = new UncaughtExceptionHandler() {		
 		public void uncaughtException(Thread t, Throwable e) {
@@ -47,27 +52,44 @@ public class Instrumentation<P extends IInstrumentableProperty<?>, R> {
 		}
 	};
 	
-	private static IInstrumentationPour pour = PourFactory.getInstrumentationPour();
+	private final IInstrumentationPour pour;
 	
 	
 	// helper methods
 	/////////////////
 	
 	private void reportUnfinishedRequest(Thread t) {
-		R request = ongoingRequests.get(t);
+		REQUEST_TYPE request = ongoingRequests.get(t);
 		Throwable e = new Throwable("Unfinished request processing detected");
 		e.setStackTrace(t.getStackTrace());
 		reportEvent(UNFINISHED_REQUEST_EVENT, requestProperty, request, DIP_THROWABLE, e);
 	}
+	
+	private void addInstrumentableProperties(ArrayList<IInstrumentableProperty> instrumentableProperties, IInstrumentableEvent... instrumentableEvents) {
+		for (IInstrumentableEvent instrumentableEvent : instrumentableEvents) {
+			IInstrumentableProperty[] instrumentableEventProperties = instrumentableEvent.getInstrumentableEvent().getProperties();
+			for (IInstrumentableProperty instrumentableEventProperty : instrumentableEventProperties) {
+				instrumentableProperties.add(instrumentableEventProperty);
+			}
+		}
+	}
 
 	
 	// report start of application, shutdown hook to report the end
-	public Instrumentation(String applicationName, P requestProperty) {
+	public Instrumentation(String applicationName, REQUEST_PROPERTY_TYPE requestProperty, IInstrumentableEvent... instrumentableEvents) {
 		this.APPLICATION_NAME = applicationName;
 		this.requestProperty  = requestProperty;
-		UNFINISHED_REQUEST_EVENT = new IInstrumentableEvent("UNFINISHED_REQUEST", requestProperty);
-	    REQUEST_START_EVENT      = new IInstrumentableEvent("REQUEST_START", requestProperty);
-	    REQUEST_FINISH_EVENT     = new IInstrumentableEvent("REQUEST_FINISH");
+		
+		// get the poor
+		ArrayList<IInstrumentableProperty> instrumentableProperties = new ArrayList<IInstrumentableProperty>();
+		addInstrumentableProperties(instrumentableProperties, instrumentableEvents);
+		addInstrumentableProperties(instrumentableProperties, DefaultInstrumentationEvents.values());
+		IInstrumentableProperty[] instrumentablePropertiesArray = instrumentableProperties.toArray(new IInstrumentableProperty[instrumentableProperties.size()]);
+		pour = PourFactory.getInstrumentationPour(instrumentablePropertiesArray);
+		
+		UNFINISHED_REQUEST_EVENT = new InstrumentableEvent("UNFINISHED_REQUEST", requestProperty);
+	    REQUEST_START_EVENT      = new InstrumentableEvent("REQUEST_START", requestProperty);
+	    REQUEST_FINISH_EVENT     = new InstrumentableEvent("REQUEST_FINISH");
 		reportEvent(DIE_APP_START);
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
@@ -80,11 +102,11 @@ public class Instrumentation<P extends IInstrumentableProperty<?>, R> {
 		});
 	}
 	
-	public void reportRequestStart(R requestData) {
+	public void reportRequestStart(REQUEST_TYPE requestData) {
 		
 		// detect any unclosed transaction on the current thread
 		Thread ct = Thread.currentThread();
-		R currentlyOpennedRequest = ongoingRequests.get(ct);
+		REQUEST_TYPE currentlyOpennedRequest = ongoingRequests.get(ct);
 		if (currentlyOpennedRequest != null) {
 			reportUnfinishedRequest(ct);
 		}
@@ -116,24 +138,24 @@ public class Instrumentation<P extends IInstrumentableProperty<?>, R> {
 		reportEvent(REQUEST_FINISH_EVENT);
 	}
 	
-	public void reportEvent(IInstrumentableEvent event) {
+	public void reportEvent(IInstrumentableEvent ievent) {
 		long currentTimeMillis = System.currentTimeMillis();
 		Thread thread          = Thread.currentThread();
-		pour.storeInstrumentableEvent(new EventDto(currentTimeMillis, APPLICATION_NAME, thread, event));
+		pour.storeInstrumentableEvent(new EventDto(currentTimeMillis, APPLICATION_NAME, thread, ievent.getInstrumentableEvent()));
 	}
 
-	public void reportEvent(IInstrumentableEvent event, IInstrumentableProperty<?> property, Object value) {
+	public void reportEvent(IInstrumentableEvent ievent, IInstrumentableProperty property, Object value) {
 		long currentTimeMillis = System.currentTimeMillis();
 		Thread thread          = Thread.currentThread();
-		pour.storeInstrumentableEvent(new EventDto(currentTimeMillis, APPLICATION_NAME, thread, event, property, value));
+		pour.storeInstrumentableEvent(new EventDto(currentTimeMillis, APPLICATION_NAME, thread, ievent.getInstrumentableEvent(), property, value));
 	}
 
-	public void reportEvent(IInstrumentableEvent event,
-	                               IInstrumentableProperty<?> property1, Object value1,
-	                               IInstrumentableProperty<?> property2, Object value2) {
+	public void reportEvent(IInstrumentableEvent ievent,
+	                        IInstrumentableProperty property1, Object value1,
+	                        IInstrumentableProperty property2, Object value2) {
 		long currentTimeMillis = System.currentTimeMillis();
 		Thread thread          = Thread.currentThread();
-		pour.storeInstrumentableEvent(new EventDto(currentTimeMillis, APPLICATION_NAME, thread, event,
+		pour.storeInstrumentableEvent(new EventDto(currentTimeMillis, APPLICATION_NAME, thread, ievent.getInstrumentableEvent(),
 		                              property1, value1, property2, value2));
 	}
 

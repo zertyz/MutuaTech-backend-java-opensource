@@ -29,10 +29,24 @@ public class SerializationRepository {
 	public void addSerializationRules(Class<?> serializationRulesEnumeration) {
 		Object[] rules = serializationRulesEnumeration.getEnumConstants();
 		for (Object rule : rules) {
-			ISerializationRule<?> serializationRule = (ISerializationRule<?>)rule;
-			Class<?> serializationType = serializationRule.getType();
-			typeToSerializationRuleMap.put(serializationType, serializationRule);
+			addSerializationRule((ISerializationRule<?>)rule);
 		}
+	}
+	
+	public SerializationRepository(ISerializationRule<?>[] serializationRules) {
+		typeToSerializationRuleMap = new Hashtable<Class<?>, ISerializationRule<?>>();
+		addSerializationRules(serializationRules);
+	}
+	
+	public void addSerializationRules(ISerializationRule<?>[] serializationRules) {
+		for (ISerializationRule<?> serializationRule : serializationRules) {
+			addSerializationRule(serializationRule);
+		}
+	}
+	
+	public void addSerializationRule(ISerializationRule<?> serializationRule) {
+		Class<?> serializationType = serializationRule.getType();
+		typeToSerializationRuleMap.put(serializationType, serializationRule);
 	}
 
 	private static String[][] stringEscapeSequences = {
@@ -41,7 +55,15 @@ public class SerializationRepository {
 		{"\t", "\\\\t"},
 	};
 	public void serialize(StringBuffer buffer, Object instance) {
-		Class<?> instanceType = instance.getClass();
+		if (instance == null) {
+			buffer.append("null");
+		} else {
+			Class<?> instanceType = instance.getClass();
+			serialize(buffer, instance, instanceType);
+		}
+	}
+
+	private void serialize(StringBuffer buffer, Object instance, Class<?> instanceType) {
 		if (instanceType == String.class) {
 			String s = (String)instance;
 			for (int i=0; i<stringEscapeSequences.length; i++) {
@@ -53,7 +75,13 @@ public class SerializationRepository {
 		} else {
 			ISerializationRule serializationRule = typeToSerializationRuleMap.get(instanceType);
 			if (serializationRule == null) {
-				throw new RuntimeException("No serialization rule found to serialize type '" + instanceType + "'");
+				// try a super type
+				Class<?> superType = instanceType.getSuperclass();
+				if (superType == Object.class) {
+					throw new RuntimeException("No serialization rule found to serialize type '" + instanceType + "'");
+				} else {
+					serialize(buffer, instance, superType);
+				}
 			} else {
 				serializationRule.appendSerializedValue(buffer, instance);
 			}

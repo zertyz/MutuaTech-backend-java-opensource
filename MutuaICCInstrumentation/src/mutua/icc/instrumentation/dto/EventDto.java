@@ -4,7 +4,7 @@ import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 import java.util.Hashtable;
 
-import mutua.icc.instrumentation.IInstrumentableEvent;
+import mutua.icc.instrumentation.InstrumentableEvent;
 import mutua.icc.instrumentation.IInstrumentableProperty;
 
 /** <pre>
@@ -26,28 +26,30 @@ public class EventDto {
 	private long currentTimeMillis;
 	private String applicationName;
 	private String threadInfo;
-	private IInstrumentableEvent event;
+	private InstrumentableEvent event;
 	private Hashtable<String, Object> properties;
 	
-	public EventDto(long currentTimeMillis, String applicationName, Thread thread, IInstrumentableEvent event) {
+	public EventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event) {
 		this.currentTimeMillis = currentTimeMillis;
 		this.applicationName   = applicationName;
 		this.threadInfo        = thread.toString();;
 		this.event             = event;
 	}
 
-	public EventDto(long currentTimeMillis, String applicationName, Thread thread, IInstrumentableEvent event,
+	public EventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
                     IInstrumentableProperty property, Object value) {
 		this(currentTimeMillis, applicationName, thread, event);
 		properties = new Hashtable<String, Object>();
-		properties.put(property.getName(), value);
+		if (value != null) {
+			properties.put(property.getInstrumentationPropertyName(), value);
+		}
 	}
 
-	public EventDto(long currentTimeMillis, String applicationName, Thread thread, IInstrumentableEvent event,
+	public EventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
 	                IInstrumentableProperty property1, Object value1,
 	                IInstrumentableProperty property2, Object value2) {
 		this(currentTimeMillis, applicationName, thread, event, property1, value1);
-		properties.put(property2.getName(), value2);
+		properties.put(property2.getInstrumentationPropertyName(), value2);
 	}
 
 	public long getCurrentTimeMillis() {
@@ -62,12 +64,16 @@ public class EventDto {
 		return threadInfo;
 	}
 
-	public IInstrumentableEvent getEvent() {
+	public InstrumentableEvent getEvent() {
 		return event;
+	}
+	
+	public IInstrumentableProperty[] getLogEventProperties() {
+		return properties.keySet().toArray(new IInstrumentableProperty[properties.size()]);
 	}
 
 	public Object getValue(IInstrumentableProperty property) {
-		return properties.get(property);
+		return properties.get(property.getInstrumentationPropertyName());
 	}
 
 	
@@ -96,8 +102,8 @@ public class EventDto {
 			sb.append(" {");
 			for (int i=0; i<eventProperties.length; i++) {
 				IInstrumentableProperty property = eventProperties[i];
-				sb.append(property.getName()).append(" = ");
-				Object value = properties.get(property.getName());
+				sb.append(property.getInstrumentationPropertyName()).append(" = ");
+				Object value = properties.get(property.getInstrumentationPropertyName());
 				Class<?> type = property.getType();
 				if (type == Integer.TYPE) {
 					sb.append((Integer)value);
@@ -111,7 +117,7 @@ public class EventDto {
 					sb.append('"').append(s).append('"');
 				} else {
 					sb.append('{');
-					property.appendValueToLogLine(sb, value);
+					property.appendSerializedValue(sb, value);
 					sb.append('}');
 				}
 				if (i < (eventProperties.length-1)) {
