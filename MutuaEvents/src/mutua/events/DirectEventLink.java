@@ -9,9 +9,9 @@ import mutua.imi.IndirectMethodNotFoundException;
  * ====================
  * (created by luiz, Jan 23, 2015)
  *
- * Implements a in-memory, same thread, blocking client dispatching
+ * Implements a in-memory, same thread, blocking client dispatching 'IEventLink'
  *
- * @see RelatedClass(es)
+ * @see IEventLink
  * @version $Id$
  * @author luiz
  */
@@ -24,8 +24,8 @@ public class DirectEventLink<E> extends IEventLink<E> {
 
 	@Override
 	public void reportListenableEvent(IndirectMethodInvocationInfo<E> event) {
-		for (EventClient client : clientsAndMethodInvokers.keySet()) try {
-			IndirectMethodInvoker<E> imi = clientsAndMethodInvokers.get(client);
+		for (EventClient client : clientsAndListenerMethodInvokers.keySet()) try {
+			IndirectMethodInvoker<E> imi = clientsAndListenerMethodInvokers.get(client);
 			imi.invokeMethod(event);
 		} catch (IndirectMethodNotFoundException e) {
 			e.printStackTrace();
@@ -34,8 +34,8 @@ public class DirectEventLink<E> extends IEventLink<E> {
 
 	@Override
 	public void reportConsumableEvent(IndirectMethodInvocationInfo<E> event) {
-		for (EventClient client : clientsAndMethodInvokers.keySet()) try {
-			IndirectMethodInvoker<E> imi = clientsAndMethodInvokers.get(client);
+		for (EventClient client : clientsAndConsumerMethodInvokers.keySet()) try {
+			IndirectMethodInvoker<E> imi = clientsAndConsumerMethodInvokers.get(client);
 			imi.invokeMethod(event);
 		} catch (IndirectMethodNotFoundException e) {
 			e.printStackTrace();

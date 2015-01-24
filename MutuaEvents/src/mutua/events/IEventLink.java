@@ -24,27 +24,26 @@ import mutua.imi.IndirectMethodNotFoundException;
 
 public abstract class IEventLink<E> {
 	
-	//private final EventServices services;
-	private Object[] eventListenerServiceIds;
-	private Object[] eventConsumerServiceIds;
-	
-	protected Hashtable<EventClient, IndirectMethodInvoker<E>> clientsAndMethodInvokers;
+	protected Hashtable<EventClient, IndirectMethodInvoker<E>> clientsAndListenerMethodInvokers;
+	protected Hashtable<EventClient, IndirectMethodInvoker<E>> clientsAndConsumerMethodInvokers;
 	private Class<E> eventsEnumeration;
 	
 	public IEventLink(Class<E> eventsEnumeration) {
-		clientsAndMethodInvokers = new Hashtable<EventClient, IndirectMethodInvoker<E>>();
+		clientsAndListenerMethodInvokers = new Hashtable<EventClient, IndirectMethodInvoker<E>>();
+		clientsAndConsumerMethodInvokers = new Hashtable<EventClient, IndirectMethodInvoker<E>>();
 		this.eventsEnumeration   = eventsEnumeration;
 	}
 	
 	/** Attempt to add an 'EventClient' to the client's list.
-	 *  returns false if the client is already present. 
-	 * @throws IndirectMethodNotFoundException */
+	 *  returns false if the client is already present. */
 	public boolean addClient(EventClient client) throws IndirectMethodNotFoundException {
-		if (clientsAndMethodInvokers.containsKey(client)) {
+		if (clientsAndListenerMethodInvokers.containsKey(client) && clientsAndConsumerMethodInvokers.containsKey(client)) {
 			return false;
 		} else {
-			IndirectMethodInvoker<E> methodInvoker = new IndirectMethodInvoker<E>(client, eventsEnumeration, EventListener.class, EventConsumer.class);
-			clientsAndMethodInvokers.put(client, methodInvoker);
+			IndirectMethodInvoker<E> clientMethodInvoker = new IndirectMethodInvoker<E>(client, eventsEnumeration, EventListener.class);
+			clientsAndListenerMethodInvokers.put(client, clientMethodInvoker);
+			IndirectMethodInvoker<E> consumerMethodInvoker = new IndirectMethodInvoker<E>(client, eventsEnumeration, EventConsumer.class);
+			clientsAndConsumerMethodInvokers.put(client, consumerMethodInvoker);
 			return true;
 		}
 	}
@@ -52,8 +51,9 @@ public abstract class IEventLink<E> {
 	/** Attempt to delete an 'EventClient' from the client's list.
 	 *  returns false if the client isn't present. */
 	public boolean deleteClient(EventClient client) {
-		if (clientsAndMethodInvokers.containsKey(client)) {
-			clientsAndMethodInvokers.remove(client);
+		if (clientsAndListenerMethodInvokers.containsKey(client) || clientsAndConsumerMethodInvokers.containsKey(client)) {
+			clientsAndListenerMethodInvokers.remove(client);
+			clientsAndConsumerMethodInvokers.remove(client);
 			return true;
 		} else {
 			return false;
@@ -68,12 +68,12 @@ public abstract class IEventLink<E> {
 	
 	/** Returns true if, for sure, events for the specified 'serviceId' cannot be consumed by any consumer */
 	public boolean areEventsNotConsumable(Object serviceId) {
-		// true for direct event link
-		if (Arrays.binarySearch(eventConsumerServiceIds, serviceId) < 0) {
-			return true;
-		} else {
+//		// true for direct event link
+//		if (Arrays.binarySearch(eventConsumerServiceIds, serviceId) < 0) {
+//			return true;
+//		} else {
 			return false;
-		}
+//		}
 	}
 
 }

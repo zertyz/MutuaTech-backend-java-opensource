@@ -78,6 +78,7 @@ public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 			if (method == null) {
 				//throw new IndirectMethodNotFoundException(this, methodName);
 			} else {
+				method.setAccessible(true);
 				methodIdToMethodMap.put((METHOD_ID_TYPE)methodIds[i], method);
 			}
 		} catch (Exception e) {

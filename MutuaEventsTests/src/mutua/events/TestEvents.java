@@ -72,6 +72,7 @@ public class TestEvents {
 			}
 			
 			@EventConsumer({"CONSUMABLE_EVENT_EXAMPLE",
+			                "LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE",
 					        "NEED_TO_BE_CONSUMED_EVENT_EXAMPLE",
 					        "LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE"})
 			public void logConsumedEvent(String param) {
@@ -79,7 +80,9 @@ public class TestEvents {
 			}
 		});
 		
-		eventServer.reportListenableAndConsumableExampleEvent("listen to this shit");
+		eventServer.reportListenableExampleEvent("listen to this shit");
+		eventServer.reportConsumableExampleEvent("consume this shit");
+		eventServer.reportListenableAndConsumableExampleEvent("listen to and consume this shit");
 	}
 
 }
