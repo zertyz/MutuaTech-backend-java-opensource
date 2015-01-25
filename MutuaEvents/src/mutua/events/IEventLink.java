@@ -1,7 +1,5 @@
 package mutua.events;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Hashtable;
 
 import mutua.events.annotations.EventConsumer;
@@ -22,27 +20,27 @@ import mutua.imi.IndirectMethodNotFoundException;
  * @author luiz
  */
 
-public abstract class IEventLink<E> {
+public abstract class IEventLink<SERVICE_EVENTS_ENUMERATION> {
 	
-	protected Hashtable<EventClient, IndirectMethodInvoker<E>> clientsAndListenerMethodInvokers;
-	protected Hashtable<EventClient, IndirectMethodInvoker<E>> clientsAndConsumerMethodInvokers;
-	private Class<E> eventsEnumeration;
+	protected Hashtable<EventClient<SERVICE_EVENTS_ENUMERATION>, IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION>> clientsAndListenerMethodInvokers;
+	protected Hashtable<EventClient<SERVICE_EVENTS_ENUMERATION>, IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION>> clientsAndConsumerMethodInvokers;
+	private Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration;
 	
-	public IEventLink(Class<E> eventsEnumeration) {
-		clientsAndListenerMethodInvokers = new Hashtable<EventClient, IndirectMethodInvoker<E>>();
-		clientsAndConsumerMethodInvokers = new Hashtable<EventClient, IndirectMethodInvoker<E>>();
-		this.eventsEnumeration   = eventsEnumeration;
+	public IEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration) {
+		clientsAndListenerMethodInvokers = new Hashtable<EventClient<SERVICE_EVENTS_ENUMERATION>, IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION>>();
+		clientsAndConsumerMethodInvokers = new Hashtable<EventClient<SERVICE_EVENTS_ENUMERATION>, IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION>>();
+		this.eventsEnumeration           = eventsEnumeration;
 	}
 	
 	/** Attempt to add an 'EventClient' to the client's list.
 	 *  returns false if the client is already present. */
-	public boolean addClient(EventClient client) throws IndirectMethodNotFoundException {
+	public boolean addClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) throws IndirectMethodNotFoundException {
 		if (clientsAndListenerMethodInvokers.containsKey(client) && clientsAndConsumerMethodInvokers.containsKey(client)) {
 			return false;
 		} else {
-			IndirectMethodInvoker<E> clientMethodInvoker = new IndirectMethodInvoker<E>(client, eventsEnumeration, EventListener.class);
+			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> clientMethodInvoker = new IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION>(client, eventsEnumeration, EventListener.class);
 			clientsAndListenerMethodInvokers.put(client, clientMethodInvoker);
-			IndirectMethodInvoker<E> consumerMethodInvoker = new IndirectMethodInvoker<E>(client, eventsEnumeration, EventConsumer.class);
+			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> consumerMethodInvoker = new IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION>(client, eventsEnumeration, EventConsumer.class);
 			clientsAndConsumerMethodInvokers.put(client, consumerMethodInvoker);
 			return true;
 		}
@@ -50,7 +48,7 @@ public abstract class IEventLink<E> {
 	
 	/** Attempt to delete an 'EventClient' from the client's list.
 	 *  returns false if the client isn't present. */
-	public boolean deleteClient(EventClient client) {
+	public boolean deleteClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) {
 		if (clientsAndListenerMethodInvokers.containsKey(client) || clientsAndConsumerMethodInvokers.containsKey(client)) {
 			clientsAndListenerMethodInvokers.remove(client);
 			clientsAndConsumerMethodInvokers.remove(client);
@@ -61,10 +59,10 @@ public abstract class IEventLink<E> {
 	}
 	
 	/** Takes actions to notify all client's appropriate 'Listener' methods that an event happened */
-	public abstract void reportListenableEvent(IndirectMethodInvocationInfo<E> event);
+	public abstract void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
 	
 	/** Takes actions to notify the appropriate 'Consumer' method of one of the client's that an event happened */
-	public abstract void reportConsumableEvent(IndirectMethodInvocationInfo<E> event);
+	public abstract void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) throws IndirectMethodNotFoundException;
 	
 	/** Returns true if, for sure, events for the specified 'serviceId' cannot be consumed by any consumer */
 	public boolean areEventsNotConsumable(Object serviceId) {

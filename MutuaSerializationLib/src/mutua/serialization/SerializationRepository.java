@@ -70,7 +70,9 @@ public class SerializationRepository {
 				s = s.replaceAll(stringEscapeSequences[i][0], stringEscapeSequences[i][1]);
 			}
 			buffer.append(s);
-		} else if ((instanceType == Integer.class) || (instanceType == StringBuffer.class)) {
+		} else if ((instanceType == Integer.TYPE) || (instanceType == Long.TYPE) ||
+		           (instanceType == Number.class) ||
+		           (instanceType == StringBuffer.class)) {
 			buffer.append(instance);
 		} else {
 			ISerializationRule serializationRule = typeToSerializationRuleMap.get(instanceType);

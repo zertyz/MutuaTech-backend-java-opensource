@@ -18,42 +18,50 @@ import mutua.imi.IndirectMethodNotFoundException;
  * @author luiz
  */
 
-public class EventServer<E> {
+public class EventServer<SERVICE_EVENTS_ENUMERATION> {
 
-	protected final IEventLink<E> link;
+	protected final IEventLink<SERVICE_EVENTS_ENUMERATION> link;
 	
-	protected EventServer(IEventLink<E> link) {
+	protected EventServer(IEventLink<SERVICE_EVENTS_ENUMERATION> link) {
 		this.link = link;
 	}
 	
-	protected void dispatchListenableEvent(E serviceId, Object... parameters) {
-		link.reportListenableEvent(new IndirectMethodInvocationInfo<E>(serviceId, parameters));
+	protected void dispatchListenableEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
+		link.reportListenableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
 	}
 	
-	protected void dispatchConsumableEvent(E serviceId, Object... parameters) {
-		link.reportConsumableEvent(new IndirectMethodInvocationInfo<E>(serviceId, parameters));
+	protected void dispatchConsumableEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
+		try {
+			link.reportConsumableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
+		} catch (IndirectMethodNotFoundException e) {
+			// nothing to do -- there is no problema if no one is consuming a consumable event
+		}
 	}
 
-	protected void dispatchListenableAndConsumableEvent(E serviceId, Object... parameters) {
-		IndirectMethodInvocationInfo<E> event = new IndirectMethodInvocationInfo<E>(serviceId, parameters);
+	protected void dispatchListenableAndConsumableEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
+		IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters);
 		link.reportListenableEvent(event);
-		link.reportConsumableEvent(event);
+		try {
+			link.reportConsumableEvent(event);
+		} catch (IndirectMethodNotFoundException e) {
+			// nothing to do -- there is no problema if no one is consuming a consumable event
+		}
 	}
 	
-	protected boolean dispatchNeedToBeConsumedEvent(E serviceId, Object... parameters) {
+	protected boolean dispatchNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) throws IndirectMethodNotFoundException {
 		if (link.areEventsNotConsumable(serviceId)) {
 			return false;
 		} else {
-			link.reportConsumableEvent(new IndirectMethodInvocationInfo<E>(serviceId, parameters));
+			link.reportConsumableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
 			return true;
 		}
 	}
 	
-	protected boolean dispatchListenableAndNeedToBeConsumedEvent(E serviceId, Object... parameters) {
+	protected boolean dispatchListenableAndNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) throws IndirectMethodNotFoundException {
 		if (link.areEventsNotConsumable(serviceId)) {
 			return false;
 		} else {
-			IndirectMethodInvocationInfo<E> event = new IndirectMethodInvocationInfo<E>(serviceId, parameters);
+			IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters);
 			link.reportListenableEvent(event);
 			link.reportConsumableEvent(event);
 			return true;
@@ -61,12 +69,12 @@ public class EventServer<E> {
 	}
 	
 	/** @see IEventLink#addClient(EventClient) */
-	public boolean addClient(EventClient client) throws IndirectMethodNotFoundException {
+	public boolean addClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) throws IndirectMethodNotFoundException {
 		return link.addClient(client);
 	}
 	
 	/** @see IEventLink#deleteClient(EventClient) */
-	public boolean deleteClient(EventClient client) {
+	public boolean deleteClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) {
 		return link.deleteClient(client);
 	}
 	

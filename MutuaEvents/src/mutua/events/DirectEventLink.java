@@ -16,29 +16,27 @@ import mutua.imi.IndirectMethodNotFoundException;
  * @author luiz
  */
 
-public class DirectEventLink<E> extends IEventLink<E> {
+public class DirectEventLink<SERVICE_EVENTS_ENUMERATION> extends IEventLink<SERVICE_EVENTS_ENUMERATION> {
 
-	public DirectEventLink(Class<E> eventsEnumeration) {
+	public DirectEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration) {
 		super(eventsEnumeration);
 	}
 
 	@Override
-	public void reportListenableEvent(IndirectMethodInvocationInfo<E> event) {
-		for (EventClient client : clientsAndListenerMethodInvokers.keySet()) try {
-			IndirectMethodInvoker<E> imi = clientsAndListenerMethodInvokers.get(client);
+	public void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndListenerMethodInvokers.keySet()) try {
+			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> imi = clientsAndListenerMethodInvokers.get(client);
 			imi.invokeMethod(event);
 		} catch (IndirectMethodNotFoundException e) {
-			e.printStackTrace();
+			// nothing to do -- there is no problema if no one is listening
 		}
 	}
 
 	@Override
-	public void reportConsumableEvent(IndirectMethodInvocationInfo<E> event) {
-		for (EventClient client : clientsAndConsumerMethodInvokers.keySet()) try {
-			IndirectMethodInvoker<E> imi = clientsAndConsumerMethodInvokers.get(client);
+	public void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) throws IndirectMethodNotFoundException {
+		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndConsumerMethodInvokers.keySet()) {
+			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> imi = clientsAndConsumerMethodInvokers.get(client);
 			imi.invokeMethod(event);
-		} catch (IndirectMethodNotFoundException e) {
-			e.printStackTrace();
 		}
 	}
 

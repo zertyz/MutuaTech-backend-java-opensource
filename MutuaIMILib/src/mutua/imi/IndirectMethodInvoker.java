@@ -82,7 +82,7 @@ public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 				methodIdToMethodMap.put((METHOD_ID_TYPE)methodIds[i], method);
 			}
 		} catch (Exception e) {
-			throw new IndirectMethodNotFoundException(e);
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -93,7 +93,7 @@ public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 		} else try {
 			return m.invoke(methodsClassInstance, invocationInfo.getParameters());
 		} catch (Exception e) {
-			throw new IndirectMethodNotFoundException(this, invocationInfo, e);
+			throw new RuntimeException(e);
 		}
 	}
 }
