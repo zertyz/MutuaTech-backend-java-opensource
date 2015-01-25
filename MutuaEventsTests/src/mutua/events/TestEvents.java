@@ -1,6 +1,6 @@
 package mutua.events;
 
-import mutua.events.TestEventServer.ETestEventService;
+import mutua.events.TestEventServer.ETestEventServices;
 import mutua.events.annotations.EventConsumer;
 import mutua.events.annotations.EventListener;
 import mutua.imi.IndirectMethodNotFoundException;
@@ -20,9 +20,9 @@ import org.junit.Test;
  * @author luiz
  */
 
-class TestEventServer extends EventServer<ETestEventService> {
+class TestEventServer extends EventServer<ETestEventServices> {
 	
-	public enum ETestEventService {
+	public enum ETestEventServices {
 		LISTENABLE_EVENT_EXAMPLE,
 		CONSUMABLE_EVENT_EXAMPLE,
 		LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE,
@@ -30,28 +30,28 @@ class TestEventServer extends EventServer<ETestEventService> {
 		LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE,
 	}
 	
-	public TestEventServer(IEventLink<ETestEventService> link) {
+	public TestEventServer(IEventLink<ETestEventServices> link) {
 		super(link);
 	}
 	
 	public void reportListenableExampleEvent(String param) {
-		dispatchListenableEvent(ETestEventService.LISTENABLE_EVENT_EXAMPLE, param);
+		dispatchListenableEvent(ETestEventServices.LISTENABLE_EVENT_EXAMPLE, param);
 	}
 	
 	public void reportConsumableExampleEvent(String param) {
-		dispatchConsumableEvent(ETestEventService.CONSUMABLE_EVENT_EXAMPLE, param);
+		dispatchConsumableEvent(ETestEventServices.CONSUMABLE_EVENT_EXAMPLE, param);
 	}
 	
 	public void reportListenableAndConsumableExampleEvent(String param) {
-		dispatchListenableAndConsumableEvent(ETestEventService.LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE, param);
+		dispatchListenableAndConsumableEvent(ETestEventServices.LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE, param);
 	}
 	
 	public boolean reportNeedToBeConsumedExampleEvent(String param) {
-		return dispatchNeedToBeConsumedEvent(ETestEventService.NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
+		return dispatchNeedToBeConsumedEvent(ETestEventServices.NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
 	}
 	
 	public boolean reportListenableAndNeedToBeConsumedExampleEvent(String param) {
-		return dispatchListenableAndNeedToBeConsumedEvent(ETestEventService.LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
+		return dispatchListenableAndNeedToBeConsumedEvent(ETestEventServices.LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
 	}
 	
 }
@@ -60,7 +60,7 @@ public class TestEvents {
 	
 	@Test
 	public void doTheShitTest() throws IndirectMethodNotFoundException {
-		IEventLink<ETestEventService> link = new DirectEventLink<ETestEventService>(ETestEventService.class);
+		IEventLink<ETestEventServices> link = new DirectEventLink<ETestEventServices>(ETestEventServices.class);
 		TestEventServer eventServer = new TestEventServer(link);
 		eventServer.addClient(new EventClient() {
 			

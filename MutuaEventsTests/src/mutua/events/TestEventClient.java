@@ -12,6 +12,6 @@ package mutua.events;
  * @author luiz
  */
 
-public class TestEventClient extends EventClient {
+public class TestEventClient implements EventClient {
 
 }

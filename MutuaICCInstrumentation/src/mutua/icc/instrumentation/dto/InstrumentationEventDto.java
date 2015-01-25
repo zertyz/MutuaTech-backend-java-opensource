@@ -21,7 +21,7 @@ import mutua.icc.instrumentation.IInstrumentableProperty;
 
 // TODO check properties against the ones registered on IInstrumentableEvent
 
-public class EventDto {
+public class InstrumentationEventDto {
 	
 	private long currentTimeMillis;
 	private String applicationName;
@@ -29,14 +29,14 @@ public class EventDto {
 	private InstrumentableEvent event;
 	private Hashtable<String, Object> properties;
 	
-	public EventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event) {
+	public InstrumentationEventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event) {
 		this.currentTimeMillis = currentTimeMillis;
 		this.applicationName   = applicationName;
 		this.threadInfo        = thread.toString();;
 		this.event             = event;
 	}
 
-	public EventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
+	public InstrumentationEventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
                     IInstrumentableProperty property, Object value) {
 		this(currentTimeMillis, applicationName, thread, event);
 		properties = new Hashtable<String, Object>();
@@ -45,7 +45,7 @@ public class EventDto {
 		}
 	}
 
-	public EventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
+	public InstrumentationEventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
 	                IInstrumentableProperty property1, Object value1,
 	                IInstrumentableProperty property2, Object value2) {
 		this(currentTimeMillis, applicationName, thread, event, property1, value1);

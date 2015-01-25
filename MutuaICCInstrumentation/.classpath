@@ -13,5 +13,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/MutuaSerializationLib"/>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/MutuaEvents"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

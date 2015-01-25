@@ -3,9 +3,12 @@ package mutua.icc.instrumentation.pour.console;
 import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 
+import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.InstrumentableEvent;
 import mutua.icc.instrumentation.IInstrumentableProperty;
-import mutua.icc.instrumentation.dto.EventDto;
+import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
+import mutua.icc.instrumentation.dto.InstrumentationEventDto;
+import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.serialization.ISerializationRule;
 import mutua.serialization.SerializationRepository;
@@ -22,25 +25,25 @@ import mutua.serialization.SerializationRepository;
  * @author luiz
  */
 
-public class InstrumentationPour extends IInstrumentationPour {
+public class InstrumentationPour implements IInstrumentationPour, InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> {
 
 		
-	private ISerializationRule<EventDto> logEventDtoSerializationRule = new ISerializationRule<EventDto>() {
+	private ISerializationRule<InstrumentationEventDto> logEventDtoSerializationRule = new ISerializationRule<InstrumentationEventDto>() {
 
 		private SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd|HH:mm:ss.SSS|zzz");
 		private FieldPosition fp = new FieldPosition(0);
 
 		@Override
-		public Class<EventDto> getType() {
-			return EventDto.class;
+		public Class<InstrumentationEventDto> getType() {
+			return InstrumentationEventDto.class;
 		}
 
 		@Override
-		public void appendSerializedValue(StringBuffer buffer, EventDto logEvent) {
+		public void appendSerializedValue(StringBuffer buffer, InstrumentationEventDto logEvent) {
 			long currentTimeMillis                                  = logEvent.getCurrentTimeMillis();
 			String applicationName                                  = logEvent.getApplicationName();
 			String threadInfo                                       = logEvent.getThreadInfo();
-			InstrumentableEvent instrumentableEvent                = logEvent.getEvent();
+			InstrumentableEvent instrumentableEvent                 = logEvent.getEvent();
 			IInstrumentableProperty[] instrumentableEventProperties = instrumentableEvent.getProperties();
 			sdf.format(currentTimeMillis, buffer, fp);
 			buffer.append("|").append(currentTimeMillis).append(", ").
@@ -89,7 +92,9 @@ public class InstrumentationPour extends IInstrumentationPour {
 	public void reset() {}
 
 	@Override
-	public void storeInstrumentableEvent(EventDto event) {
+	@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT",
+	                "APPLICATION_INSTRUMENTATION_EVENT"})
+	public void storeInstrumentableEvent(InstrumentationEventDto event) {
 		StringBuffer logLine = new StringBuffer();
 		serializer.serialize(logLine, event);
 		System.out.println(logLine);
@@ -106,7 +111,7 @@ public class InstrumentationPour extends IInstrumentationPour {
 	}
 
 	@Override
-	public EventDto getNextEvent(int descriptor) {
+	public InstrumentationEventDto getNextEvent(int descriptor) {
 		return null;
 	}
 

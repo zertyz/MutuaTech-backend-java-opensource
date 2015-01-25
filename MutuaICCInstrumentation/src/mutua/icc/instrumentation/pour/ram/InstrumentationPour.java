@@ -2,7 +2,7 @@ package mutua.icc.instrumentation.pour.ram;
 
 import java.util.Hashtable;
 
-import mutua.icc.instrumentation.dto.EventDto;
+import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 
 /** <pre>
@@ -17,7 +17,7 @@ import mutua.icc.instrumentation.pour.IInstrumentationPour;
  * @author luiz
  */
 
-public class InstrumentationPour extends IInstrumentationPour {
+public class InstrumentationPour implements IInstrumentationPour {
 	
 
 	// configurable constants
@@ -35,7 +35,7 @@ public class InstrumentationPour extends IInstrumentationPour {
 	////////////
 	
 	// data := { [index1] = eventData1, [index2] = eventData2, ... }
-	private static Hashtable<Integer, EventDto> data = new Hashtable<Integer, EventDto>(MAX_LINES+1);
+	private static Hashtable<Integer, InstrumentationEventDto> data = new Hashtable<Integer, InstrumentationEventDto>(MAX_LINES+1);
 	private static int dataIndex = 0;
 	// free descriptors have the value -1
 	private static int[] descriptorLastIndexes = new int[MAX_DESCRIPTORS];
@@ -51,7 +51,7 @@ public class InstrumentationPour extends IInstrumentationPour {
 	** HELPER METHODS **
 	*******************/
 	
-	private void holdEntry(EventDto event) {
+	private void holdEntry(InstrumentationEventDto event) {
 		data.put(dataIndex++, event);
 		while (data.size() > MAX_LINES) {
 			data.remove(dataIndex - MAX_LINES - 1);
@@ -79,7 +79,7 @@ public class InstrumentationPour extends IInstrumentationPour {
 	}
 
 	@Override
-	public void storeInstrumentableEvent(EventDto event) {
+	public void storeInstrumentableEvent(InstrumentationEventDto event) {
 		holdEntry(event);
 	}
 
@@ -105,7 +105,7 @@ public class InstrumentationPour extends IInstrumentationPour {
 
 
 	@Override
-	public EventDto getNextEvent(int descriptor) {
+	public InstrumentationEventDto getNextEvent(int descriptor) {
 		return data.get(descriptorLastIndexes[descriptor]++);
 	}
 

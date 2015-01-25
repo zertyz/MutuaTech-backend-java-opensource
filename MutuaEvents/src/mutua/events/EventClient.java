@@ -5,13 +5,15 @@ package mutua.events;
  * ================
  * (created by luiz, Jan 23, 2015)
  *
- * Base class for all event clients
+ * Base class for all event clients, where 'SERVICE_EVENTS_ENUMERATION' is the
+ * enumeration of events recognized by this client, whose methods must be
+ * annotated with '@EventListener{enum1, ...}'
  *
  * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
 
-public class EventClient {
+public interface EventClient<SERVICE_EVENTS_ENUMERATION> {
 
 }
