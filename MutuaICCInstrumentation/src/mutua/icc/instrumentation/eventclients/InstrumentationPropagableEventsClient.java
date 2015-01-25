@@ -1,7 +1,6 @@
 package mutua.icc.instrumentation.eventclients;
 
 import mutua.events.EventClient;
-import mutua.events.annotations.EventListener;
 
 /** <pre>
  * InstrumentationPropagableEventsClient.java

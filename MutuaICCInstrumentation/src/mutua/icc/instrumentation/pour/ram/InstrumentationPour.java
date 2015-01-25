@@ -2,6 +2,7 @@ package mutua.icc.instrumentation.pour.ram;
 
 import java.util.Hashtable;
 
+import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 
@@ -68,10 +69,14 @@ public class InstrumentationPour implements IInstrumentationPour {
 	}
 
 	
-	/****************************************
-	** IInstrumentationData IMPLEMENTATION **
-	****************************************/
+	// IInstrumentationData implementation
+	//////////////////////////////////////
 	
+	@Override
+	public void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties) {
+		
+	}
+
 	@Override
 	public void reset() {
 		data.clear();

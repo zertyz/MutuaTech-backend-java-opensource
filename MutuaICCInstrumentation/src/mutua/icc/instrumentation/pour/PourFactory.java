@@ -34,9 +34,9 @@ public class PourFactory {
 	private IInstrumentationPour ip;
 	
 	
-	private PourFactory(EInstrumentationDataPours pour, IInstrumentableProperty[] instrumentationProperties) {
+	private PourFactory(EInstrumentationDataPours pourType, IInstrumentableProperty[] instrumentationProperties) {
 		
-		switch (pour) {
+		switch (pourType) {
 			case RAM:
 				ip = new mutua.icc.instrumentation.pour.ram.InstrumentationPour();
 				break;
@@ -48,17 +48,17 @@ public class PourFactory {
 			case COMPRESSED_ROLLING_FILE:
 			case NETWORK:
 			default:
-				throw new RuntimeException("Don't now how to build an instance of " + pour.name());
+				throw new RuntimeException("Don't now how to build an instance of " + pourType.name());
 		}
 		
 	}
 
-	public static IInstrumentationPour getInstrumentationPour(EInstrumentationDataPours pour, IInstrumentableProperty[] instrumentationProperties) {
-		if (instances[pour.ordinal()] != null) {
-			return instances[pour.ordinal()].ip;
+	public static IInstrumentationPour getInstrumentationPour(EInstrumentationDataPours pourType, IInstrumentableProperty[] instrumentationProperties) {
+		if (instances[pourType.ordinal()] != null) {
+			return instances[pourType.ordinal()].ip;
 		} else {
-			instances[pour.ordinal()] = new PourFactory(pour, instrumentationProperties);
-			return getInstrumentationPour(pour, instrumentationProperties);
+			instances[pourType.ordinal()] = new PourFactory(pourType, instrumentationProperties);
+			return getInstrumentationPour(pourType, instrumentationProperties);
 		}
 	}
 

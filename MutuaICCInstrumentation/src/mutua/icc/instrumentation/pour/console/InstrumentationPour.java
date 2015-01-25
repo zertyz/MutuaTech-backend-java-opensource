@@ -89,6 +89,11 @@ public class InstrumentationPour implements IInstrumentationPour, Instrumentatio
 	//////////////////////////////////////
 
 	@Override
+	public void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties) {
+		serializer.addSerializationRules(instrumentableProperties);
+	}
+	
+	@Override
 	public void reset() {}
 
 	@Override

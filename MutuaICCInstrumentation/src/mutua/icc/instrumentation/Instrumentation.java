@@ -16,6 +16,7 @@ import mutua.events.EventServer;
 import mutua.events.IEventLink;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
+import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.icc.instrumentation.pour.PourFactory;
 import mutua.imi.IndirectMethodNotFoundException;
@@ -53,9 +54,9 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	private String APPLICATION_NAME;
 	private REQUEST_PROPERTY_TYPE requestProperty;
 	
-	private InstrumentableEvent UNFINISHED_REQUEST_EVENT;
-	private InstrumentableEvent REQUEST_START_EVENT;
-	private InstrumentableEvent REQUEST_FINISH_EVENT;
+	public InstrumentableEvent UNFINISHED_REQUEST_EVENT;
+	public InstrumentableEvent REQUEST_START_EVENT;
+	public InstrumentableEvent REQUEST_FINISH_EVENT;
 
 	
 	private WeakHashMap<Thread, REQUEST_TYPE> ongoingRequests = new WeakHashMap<Thread, REQUEST_TYPE>();
@@ -79,15 +80,6 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		reportInternalEvent(UNFINISHED_REQUEST_EVENT, requestProperty, request, DIP_THROWABLE, e);
 	}
 	
-	private void addInstrumentableProperties(ArrayList<IInstrumentableProperty> instrumentableProperties, IInstrumentableEvent... instrumentableEvents) {
-		for (IInstrumentableEvent instrumentableEvent : instrumentableEvents) {
-			IInstrumentableProperty[] instrumentableEventProperties = instrumentableEvent.getInstrumentableEvent().getProperties();
-			for (IInstrumentableProperty instrumentableEventProperty : instrumentableEventProperties) {
-				instrumentableProperties.add(instrumentableEventProperty);
-			}
-		}
-	}
-
 	private InstrumentationEventDto getInstrumentationEvent(Thread thread, IInstrumentableEvent ievent,
 	                                                        IInstrumentableProperty property1, Object value1,
 	                                                        IInstrumentableProperty property2, Object value2) {
@@ -118,7 +110,7 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	}
 
 	
-	// report start of application, shutdown hook to report the end
+	/** report start of application, shutdown hook to report the end */
 	public Instrumentation(String applicationName, REQUEST_PROPERTY_TYPE requestProperty, IInstrumentableEvent... instrumentableEvents) {
 		
 		super(propagableEventsLink);
@@ -126,12 +118,10 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		this.APPLICATION_NAME = applicationName;
 		this.requestProperty  = requestProperty;
 		
-		// get the poor
-		ArrayList<IInstrumentableProperty> instrumentableProperties = new ArrayList<IInstrumentableProperty>();
-		addInstrumentableProperties(instrumentableProperties, instrumentableEvents);
-		addInstrumentableProperties(instrumentableProperties, DefaultInstrumentationEvents.values());
-		IInstrumentableProperty[] instrumentablePropertiesArray = instrumentableProperties.toArray(new IInstrumentableProperty[instrumentableProperties.size()]);
-		pour = PourFactory.getInstrumentationPour(instrumentablePropertiesArray);
+		// get & configure the poor
+		pour = PourFactory.getInstrumentationPour(new IInstrumentableProperty[] {});
+		addInstrumentableEvents(instrumentableEvents);
+		addInstrumentableEvents(DefaultInstrumentationEvents.values());
 
 		// add the default instrumentation propagable events consumer (the instrumentation poor notifier)
 		try {
@@ -158,6 +148,15 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 			}
 		});
 		
+	}
+	
+	/** Includes the provided 'instrumentableEvents' on the allowed events for this instrumentation pour
+	 *  -- needed for serialization purposes */
+	public void addInstrumentableEvents(IInstrumentableEvent... instrumentableEvents) {
+		for (IInstrumentableEvent instrumentableEvent : instrumentableEvents) {
+			IInstrumentableProperty[] instrumentableEventProperties = instrumentableEvent.getInstrumentableEvent().getProperties();
+			pour.considerInstrumentableProperties(instrumentableEventProperties);
+		}
 	}
 	
 	public void reportRequestStart(REQUEST_TYPE requestData) {
@@ -251,5 +250,9 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	
 	public void reportUncoughtThrowable(Throwable t, String msg) {
 		reportEvent(DIE_UNCOUGHT_EXCEPTION, DIP_MSG, msg, DIP_THROWABLE, t);
+	}
+	
+	public boolean addInstrumentationPropagableEventsClient(InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> instrumentationPropagableEventsClient) throws IndirectMethodNotFoundException {
+		return super.addClient(instrumentationPropagableEventsClient);
 	}
 }

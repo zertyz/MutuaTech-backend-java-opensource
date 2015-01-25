@@ -1,7 +1,18 @@
 package mutua.icc.instrumentation;
 
-import static mutua.icc.instrumentation.InstrumentationEvents.*;
-import static mutua.icc.instrumentation.InstrumentationProperties.*;
+import static mutua.icc.instrumentation.InstrumentationEvents.NOPROP_EVENT;
+import static mutua.icc.instrumentation.InstrumentationEvents.ONEPROP_EVENT;
+import static mutua.icc.instrumentation.InstrumentationEvents.TWOPROP_EVENT;
+import static mutua.icc.instrumentation.InstrumentationProperties.DAY_OF_WEEK;
+import static mutua.icc.instrumentation.InstrumentationProperties.MAIL;
+import mutua.events.annotations.EventListener;
+import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
+import mutua.icc.instrumentation.dto.InstrumentationEventDto;
+import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
+import mutua.icc.instrumentation.pour.IInstrumentationPour;
+import mutua.icc.instrumentation.pour.PourFactory;
+import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
+import mutua.imi.IndirectMethodNotFoundException;
 
 import org.junit.Test;
 
@@ -53,6 +64,26 @@ public class InstrumentationTests {
 			}
 			
 		}.start();
+	}
+	
+	@Test
+	public void customPropagableInstrumentationEventClientTest() throws IndirectMethodNotFoundException {
+		log.addInstrumentationPropagableEventsClient(new InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents>() {
+			@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT"})
+			public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto event) {
+				InstrumentableEvent instrumentableEvent = event.getEvent();
+				if (instrumentableEvent == log.REQUEST_START_EVENT) {
+					System.out.println("PROFILE: request start");
+				} else if (instrumentableEvent == log.REQUEST_FINISH_EVENT) {
+					System.out.println("PROFILE: request finish");
+				} else {
+					System.out.println("PROFILE: unimportant internal event");
+				}
+			}
+		});
+		log.reportRequestStart("customPropagableInstrumentationEventClientTest");
+		log.reportEvent(ONEPROP_EVENT);
+		log.reportRequestFinish();
 	}
 
 }

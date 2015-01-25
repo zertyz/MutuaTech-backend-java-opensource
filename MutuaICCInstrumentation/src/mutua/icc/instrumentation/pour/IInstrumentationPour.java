@@ -1,7 +1,6 @@
 package mutua.icc.instrumentation.pour;
 
-import com.sun.org.apache.bcel.internal.generic.InstructionComparator;
-
+import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
@@ -20,6 +19,9 @@ import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsCli
  */
 
 public interface IInstrumentationPour extends InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> {
+	
+	/** Consider the additional 'IInstrumentableProperty's when serializing data */
+	public abstract void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties);
 	
 	/** Resets the database, for testing purposes */
 	public abstract void reset();
