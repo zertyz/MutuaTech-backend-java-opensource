@@ -121,7 +121,7 @@ enum EProfileInstrumentationProperties implements IInstrumentableProperty {
 enum EProfileInstrumentationEvents implements IInstrumentableEvent {
 
 	
-	PROFILE_RESULT("PROFILE RESULT", EProfileInstrumentationProperties.MEASUREMENT_NAME, EProfileInstrumentationProperties.ELAPSED_MILLIS),
+	PROFILE_RESULT("PROFILER RESULT", EProfileInstrumentationProperties.MEASUREMENT_NAME, EProfileInstrumentationProperties.ELAPSED_MILLIS),
 	
 	
 	;
