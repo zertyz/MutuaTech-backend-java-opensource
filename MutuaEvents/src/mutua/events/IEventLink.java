@@ -62,7 +62,7 @@ public abstract class IEventLink<SERVICE_EVENTS_ENUMERATION> {
 	public abstract void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
 	
 	/** Takes actions to notify the appropriate 'Consumer' method of one of the client's that an event happened */
-	public abstract void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) throws IndirectMethodNotFoundException;
+	public abstract void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
 	
 	/** Returns true if, for sure, events for the specified 'serviceId' cannot be consumed by any consumer */
 	public boolean areEventsNotConsumable(Object serviceId) {

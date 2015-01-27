@@ -9,7 +9,7 @@ import mutua.imi.IndirectMethodNotFoundException;
  * ====================
  * (created by luiz, Jan 23, 2015)
  *
- * Implements a in-memory, same thread, blocking client dispatching 'IEventLink'
+ * Implements a in-memory, same thread, blocking server dispatching 'IEventLink'
  *
  * @see IEventLink
  * @version $Id$
@@ -33,10 +33,12 @@ public class DirectEventLink<SERVICE_EVENTS_ENUMERATION> extends IEventLink<SERV
 	}
 
 	@Override
-	public void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) throws IndirectMethodNotFoundException {
-		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndConsumerMethodInvokers.keySet()) {
+	public void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndConsumerMethodInvokers.keySet()) try {
 			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> imi = clientsAndConsumerMethodInvokers.get(client);
 			imi.invokeMethod(event);
+		} catch (IndirectMethodNotFoundException e) {
+			//e.printStackTrace();
 		}
 	}
 

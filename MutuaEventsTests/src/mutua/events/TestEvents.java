@@ -20,42 +20,6 @@ import org.junit.Test;
  * @author luiz
  */
 
-class TestEventServer extends EventServer<ETestEventServices> {
-	
-	public enum ETestEventServices {
-		LISTENABLE_EVENT_EXAMPLE,
-		CONSUMABLE_EVENT_EXAMPLE,
-		LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE,
-		NEED_TO_BE_CONSUMED_EVENT_EXAMPLE,
-		LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE,
-	}
-	
-	public TestEventServer(IEventLink<ETestEventServices> link) {
-		super(link);
-	}
-	
-	public void reportListenableExampleEvent(String param) {
-		dispatchListenableEvent(ETestEventServices.LISTENABLE_EVENT_EXAMPLE, param);
-	}
-	
-	public void reportConsumableExampleEvent(String param) {
-		dispatchConsumableEvent(ETestEventServices.CONSUMABLE_EVENT_EXAMPLE, param);
-	}
-	
-	public void reportListenableAndConsumableExampleEvent(String param) {
-		dispatchListenableAndConsumableEvent(ETestEventServices.LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE, param);
-	}
-	
-	public boolean reportNeedToBeConsumedExampleEvent(String param) throws IndirectMethodNotFoundException {
-		return dispatchNeedToBeConsumedEvent(ETestEventServices.NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
-	}
-	
-	public boolean reportListenableAndNeedToBeConsumedExampleEvent(String param) throws IndirectMethodNotFoundException {
-		return dispatchListenableAndNeedToBeConsumedEvent(ETestEventServices.LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
-	}
-	
-}
-
 public class TestEvents {
 	
 	@Test
@@ -135,3 +99,41 @@ public class TestEvents {
 		eventServer.reportListenableExampleEvent("raise a shit");
 	}
 }
+
+
+class TestEventServer extends EventServer<ETestEventServices> {
+	
+	public enum ETestEventServices {
+		LISTENABLE_EVENT_EXAMPLE,
+		CONSUMABLE_EVENT_EXAMPLE,
+		LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE,
+		NEED_TO_BE_CONSUMED_EVENT_EXAMPLE,
+		LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE,
+	}
+	
+	public TestEventServer(IEventLink<ETestEventServices> link) {
+		super(link);
+	}
+	
+	public void reportListenableExampleEvent(String param) {
+		dispatchListenableEvent(ETestEventServices.LISTENABLE_EVENT_EXAMPLE, param);
+	}
+	
+	public void reportConsumableExampleEvent(String param) {
+		dispatchConsumableEvent(ETestEventServices.CONSUMABLE_EVENT_EXAMPLE, param);
+	}
+	
+	public void reportListenableAndConsumableExampleEvent(String param) {
+		dispatchListenableAndConsumableEvent(ETestEventServices.LISTENABLE_AND_CONSUMABLE_EVENT_EXAMPLE, param);
+	}
+	
+	public boolean reportNeedToBeConsumedExampleEvent(String param) throws IndirectMethodNotFoundException {
+		return dispatchNeedToBeConsumedEvent(ETestEventServices.NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
+	}
+	
+	public boolean reportListenableAndNeedToBeConsumedExampleEvent(String param) throws IndirectMethodNotFoundException {
+		return dispatchListenableAndNeedToBeConsumedEvent(ETestEventServices.LISTENABLE_AND_NEED_TO_BE_CONSUMED_EVENT_EXAMPLE, param);
+	}
+	
+}
+

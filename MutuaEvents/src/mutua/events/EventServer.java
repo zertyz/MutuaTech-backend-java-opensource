@@ -31,24 +31,16 @@ public class EventServer<SERVICE_EVENTS_ENUMERATION> {
 	}
 	
 	protected void dispatchConsumableEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
-		try {
-			link.reportConsumableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
-		} catch (IndirectMethodNotFoundException e) {
-			// nothing to do -- there is no problema if no one is consuming a consumable event
-		}
+		link.reportConsumableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
 	}
 
 	protected void dispatchListenableAndConsumableEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
 		IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters);
 		link.reportListenableEvent(event);
-		try {
-			link.reportConsumableEvent(event);
-		} catch (IndirectMethodNotFoundException e) {
-			// nothing to do -- there is no problema if no one is consuming a consumable event
-		}
+		link.reportConsumableEvent(event);
 	}
 	
-	protected boolean dispatchNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) throws IndirectMethodNotFoundException {
+	protected boolean dispatchNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
 		if (link.areEventsNotConsumable(serviceId)) {
 			return false;
 		} else {
@@ -57,7 +49,7 @@ public class EventServer<SERVICE_EVENTS_ENUMERATION> {
 		}
 	}
 	
-	protected boolean dispatchListenableAndNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) throws IndirectMethodNotFoundException {
+	protected boolean dispatchListenableAndNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
 		if (link.areEventsNotConsumable(serviceId)) {
 			return false;
 		} else {

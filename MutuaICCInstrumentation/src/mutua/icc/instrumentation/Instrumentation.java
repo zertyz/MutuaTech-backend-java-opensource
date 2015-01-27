@@ -1,11 +1,7 @@
 package mutua.icc.instrumentation;
 
-import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_APP_SHUTDOWN;
-import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_APP_START;
-import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_REPORTED_THROWABLE;
-import static mutua.icc.instrumentation.DefaultInstrumentationEvents.DIE_UNCOUGHT_EXCEPTION;
-import static mutua.icc.instrumentation.DefaultInstrumentationProperties.DIP_MSG;
-import static mutua.icc.instrumentation.DefaultInstrumentationProperties.DIP_THROWABLE;
+import static mutua.icc.instrumentation.DefaultInstrumentationEvents.*;
+import static mutua.icc.instrumentation.DefaultInstrumentationProperties.*;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
@@ -242,6 +238,10 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	                        IInstrumentableProperty property2, Object value2) {
 		InstrumentationEventDto instrumentationEvent = getInstrumentationEvent(ievent, property1, value1, property2, value2);
 		dispatchListenableEvent(EInstrumentationPropagableEvents.APPLICATION_INSTRUMENTATION_EVENT, instrumentationEvent);
+	}
+	
+	public void reportDebug(String msg) {
+		reportEvent(DIE_DEBUG, DIP_MSG, msg);
 	}
 	
 	public void reportThrowable(Throwable t, String msg) {

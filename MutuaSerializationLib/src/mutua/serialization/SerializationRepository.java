@@ -50,9 +50,10 @@ public class SerializationRepository {
 	}
 
 	private static String[][] stringEscapeSequences = {
-		{"\n", "\\\\n"},
-		{"\r", "\\\\r"},
-		{"\t", "\\\\t"},
+		{"\\\\", "\\\\\\\\"},
+		{"\n",   "\\\\n"},
+		{"\r",   "\\\\r"},
+		{"\t",   "\\\\t"},
 	};
 	public void serialize(StringBuffer buffer, Object instance) {
 		if (instance == null) {
@@ -70,6 +71,16 @@ public class SerializationRepository {
 				s = s.replaceAll(stringEscapeSequences[i][0], stringEscapeSequences[i][1]);
 			}
 			buffer.append(s);
+		} else if (instanceType == String[].class) {
+			String[] ss = (String[])instance;
+			for (int i=0; i<ss.length; i++) {
+				buffer.append('"');
+				serialize(buffer, ss[i], String.class);
+				buffer.append('"');
+				if (i < ss.length-1) {
+					buffer.append(',');
+				}
+			}
 		} else if ((instanceType == Integer.TYPE) || (instanceType == Long.TYPE) ||
 		           (instanceType == Number.class) ||
 		           (instanceType == StringBuffer.class)) {

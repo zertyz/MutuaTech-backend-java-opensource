@@ -28,6 +28,7 @@ public class PourFactory {
 	// configurable values
 	public static EInstrumentationDataPours DEFAULT_POUR = EInstrumentationDataPours.CONSOLE;
 	
+	// the multiton instances
 	private static final PourFactory[] instances = new PourFactory[EInstrumentationDataPours.values().length];
 
 	
