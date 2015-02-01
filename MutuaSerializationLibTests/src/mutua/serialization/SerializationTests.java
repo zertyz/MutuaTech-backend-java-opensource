@@ -17,6 +17,8 @@ import org.junit.Test;
  */
 
 public class SerializationTests {
+	
+	public enum ESomeNumbers {ONE, TWO, THREE};
 
 	@Test
 	public void serializationTest() {
@@ -31,6 +33,7 @@ public class SerializationTests {
 		serializer.serialize(buffer, 1);
 		serializer.serialize(buffer, new StringBuffer(" and the results are: "));
 		serializer.serialize(buffer, email);
+		serializer.serialize(buffer, ESomeNumbers.THREE);
 		
 		System.out.println(buffer.toString());
 		

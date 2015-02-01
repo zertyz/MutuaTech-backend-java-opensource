@@ -83,7 +83,7 @@ public class SerializationRepository {
 			}
 		} else if ((instanceType == Integer.TYPE) || (instanceType == Long.TYPE) ||
 		           (instanceType == Number.class) ||
-		           (instanceType == StringBuffer.class)) {
+		           (instanceType == StringBuffer.class) || (instanceType == Enum.class)) {
 			buffer.append(instance);
 		} else {
 			ISerializationRule serializationRule = typeToSerializationRuleMap.get(instanceType);

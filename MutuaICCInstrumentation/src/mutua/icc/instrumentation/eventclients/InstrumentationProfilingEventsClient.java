@@ -146,4 +146,3 @@ enum EProfileInstrumentationEvents implements IInstrumentableEvent {
 		return instrumentableEvent;
 	}
 }
-

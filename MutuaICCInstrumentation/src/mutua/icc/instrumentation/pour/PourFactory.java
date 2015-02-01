@@ -19,7 +19,7 @@ public class PourFactory {
 	public enum EInstrumentationDataPours {
 		RAM,
 		CONSOLE,
-		DATABASE,
+		POSTGRESQL_DATABASE,
 		ROLLING_FILE,
 		COMPRESSED_ROLLING_FILE,
 		NETWORK,
@@ -44,7 +44,7 @@ public class PourFactory {
 			case CONSOLE:
 				ip = new mutua.icc.instrumentation.pour.console.InstrumentationPour(instrumentationProperties);
 				break;
-			case DATABASE:
+			case POSTGRESQL_DATABASE:
 			case ROLLING_FILE:
 			case COMPRESSED_ROLLING_FILE:
 			case NETWORK:

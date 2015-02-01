@@ -11,7 +11,7 @@ import mutua.imi.IndirectMethodNotFoundException;
  * ===================
  * (created by luiz, Jan 26, 2015)
  *
- * Implements a serializable, distributable, non-blocking server dispatching 'IEventLink'
+ * Implements a local RAM memory backed buffer and non-blocking server dispatching 'IEventLink'
  *
  * @see RelatedClass(es)
  * @version $Id$
