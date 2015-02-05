@@ -8,6 +8,7 @@ import java.io.IOException;
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
+import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 
 import org.junit.Test;
 
@@ -25,7 +26,8 @@ import org.junit.Test;
 
 public class ConfigurationManagerTests {
 	
-	private static Instrumentation<DefaultInstrumentationProperties, String> log = new Instrumentation<DefaultInstrumentationProperties, String>("MutuaICCConfigurationTests", DefaultInstrumentationProperties.DIP_MSG);
+	private static Instrumentation<DefaultInstrumentationProperties, String> log = new Instrumentation<DefaultInstrumentationProperties, String>(
+			"MutuaICCConfigurationTests", DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null);
 	
 	
 	private static void checkSerializationAndDesserialization(ConfigurationManager cm) throws IllegalArgumentException, IllegalAccessException {

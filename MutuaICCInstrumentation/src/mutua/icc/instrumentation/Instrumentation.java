@@ -3,6 +3,7 @@ package mutua.icc.instrumentation;
 import static mutua.icc.instrumentation.DefaultInstrumentationEvents.*;
 import static mutua.icc.instrumentation.DefaultInstrumentationProperties.*;
 
+import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.WeakHashMap;
@@ -15,6 +16,7 @@ import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.icc.instrumentation.pour.PourFactory;
+import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 import mutua.imi.IndirectMethodNotFoundException;
 
 
@@ -42,11 +44,12 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT,
 		APPLICATION_INSTRUMENTATION_EVENT,
 	};
-	private static IEventLink<EInstrumentationPropagableEvents> propagableEventsLink = new DirectEventLink<EInstrumentationPropagableEvents>(EInstrumentationPropagableEvents.class);
 	
 	// data structures
 	//////////////////
 	
+	private IEventLink<EInstrumentationPropagableEvents> propagableEventsLink;
+
 	private String APPLICATION_NAME;
 	private REQUEST_PROPERTY_TYPE requestProperty;
 	
@@ -105,17 +108,19 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		return new InstrumentationEventDto(currentTimeMillis, APPLICATION_NAME, thread, ievent.getInstrumentableEvent());
 	}
 
-	
-	/** report start of application, shutdown hook to report the end */
-	public Instrumentation(String applicationName, REQUEST_PROPERTY_TYPE requestProperty, IInstrumentableEvent... instrumentableEvents) {
-		
+	/** needed to satisfy the java need/limitation that super can only receive a value that may be set to an instance variable if it comes as a constructor parameter */
+	private Instrumentation(String applicationName, REQUEST_PROPERTY_TYPE requestProperty,
+	                       IEventLink<EInstrumentationPropagableEvents> propagableEventsLink,
+	                       EInstrumentationDataPours pourType, String descriptorReference,
+	                       IInstrumentableEvent... instrumentableEvents) {
+
 		super(propagableEventsLink);
-		
+
 		this.APPLICATION_NAME = applicationName;
 		this.requestProperty  = requestProperty;
 		
 		// get & configure the poor
-		pour = PourFactory.getInstrumentationPour(new IInstrumentableProperty[] {});
+		pour = PourFactory.getInstrumentationPour(pourType, descriptorReference, new IInstrumentableProperty[] {});
 		addInstrumentableEvents(instrumentableEvents);
 		addInstrumentableEvents(DefaultInstrumentationEvents.values());
 
@@ -125,7 +130,12 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		} catch (IndirectMethodNotFoundException e) {
 			String msg = "Exception while initializing the Instrumentation Propagable Events framework";
 			InstrumentationEventDto event = getInstrumentationEvent(DIE_UNCOUGHT_EXCEPTION, DIP_MSG, msg, DIP_THROWABLE, e);
-			pour.storeInstrumentableEvent(event);
+			try {
+				pour.storeInstrumentableEvent(event);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+				System.out.println("Error documenting the log event "+event);
+			}
 			throw new RuntimeException(msg, e);
 		}
 		
@@ -137,12 +147,25 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-				for (Thread t : ongoingRequests.keySet()) {
-					reportUnfinishedRequest(t);
+				synchronized (ongoingRequests) {
+					for (Thread t : ongoingRequests.keySet()) {
+						reportUnfinishedRequest(t);
+					}
 				}
 				reportInternalEvent(DIE_APP_SHUTDOWN);
 			}
 		});
+	}
+	
+	/** report start of application, shutdown hook to report the end */
+	public Instrumentation(String applicationName, REQUEST_PROPERTY_TYPE requestProperty,
+	                       EInstrumentationDataPours pourType, String descriptorReference,
+	                       IInstrumentableEvent... instrumentableEvents) {
+		
+		this(applicationName, requestProperty,
+			 new DirectEventLink<EInstrumentationPropagableEvents>(EInstrumentationPropagableEvents.class),
+			 pourType, descriptorReference,
+			 instrumentableEvents);
 		
 	}
 	
@@ -157,16 +180,19 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	
 	public void reportRequestStart(REQUEST_TYPE requestData) {
 		
-		// detect any unclosed transaction on the current thread
 		Thread ct = Thread.currentThread();
-		REQUEST_TYPE currentlyOpennedRequest = ongoingRequests.get(ct);
-		if (currentlyOpennedRequest != null) {
-			reportUnfinishedRequest(ct);
-		}
-		ongoingRequests.put(Thread.currentThread(), requestData);
-		
-		// detect any unclosed transaction on finished threads
+
 		synchronized (ongoingRequests) {
+
+			// detect any unclosed transaction on the current thread
+			REQUEST_TYPE currentlyOpennedRequest = ongoingRequests.get(ct);
+			if (currentlyOpennedRequest != null) {
+				reportUnfinishedRequest(ct);
+			}		
+
+			ongoingRequests.put(Thread.currentThread(), requestData);
+			
+			// detect any unclosed transaction on finished threads
 			ArrayList<Thread> waitingToBeRemovedThreads = new ArrayList<Thread>();
 			for (Thread t : ongoingRequests.keySet()) {
 				if (!t.isAlive()) {
@@ -187,7 +213,9 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	}
 	
 	public void reportRequestFinish() {
-		ongoingRequests.remove(Thread.currentThread());
+		synchronized (ongoingRequests) {
+			ongoingRequests.remove(Thread.currentThread());
+		}
 		reportInternalEvent(REQUEST_FINISH_EVENT);
 	}
 	

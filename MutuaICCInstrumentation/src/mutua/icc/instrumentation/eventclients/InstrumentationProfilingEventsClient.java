@@ -1,5 +1,6 @@
 package mutua.icc.instrumentation.eventclients;
 
+import java.io.IOException;
 import java.util.Hashtable;
 
 import mutua.events.annotations.EventListener;
@@ -35,15 +36,23 @@ public class InstrumentationProfilingEventsClient implements InstrumentationProp
 	private final Hashtable<String, Long> requestStartTimes;
 	
 	
-	public InstrumentationProfilingEventsClient(Instrumentation<?, ?> log, EInstrumentationDataPours pourType) {
+	public InstrumentationProfilingEventsClient(Instrumentation<?, ?> log, EInstrumentationDataPours pourType, String descriptorReference) {
 		this.log  = log;
-		this.pour = PourFactory.getInstrumentationPour(pourType, EProfileInstrumentationProperties.values());
+		this.pour = PourFactory.getInstrumentationPour(pourType, descriptorReference, EProfileInstrumentationProperties.values());
 		//requestStartTimes = new WeakHashMap<String, Long>();
 		requestStartTimes = new Hashtable<String, Long>();
 	}
 
+	public InstrumentationProfilingEventsClient(Instrumentation<?, ?> log, EInstrumentationDataPours pourType) {
+		this(log, pourType, null);
+		if ((pourType != EInstrumentationDataPours.CONSOLE) &&
+			(pourType != EInstrumentationDataPours.RAM)) {
+			throw new RuntimeException("When using a '"+pourType.name()+"' pour type, please provide a 'descriptorReference' (available on the other constructor)");
+		}
+	}
+
 	@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT"})
-	public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto applicationEvent) {
+	public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto applicationEvent) throws IOException {
 		InstrumentableEvent instrumentableEvent = applicationEvent.getEvent();
 		String applicationName = applicationEvent.getApplicationName();
 		String threadInfo = applicationEvent.getThreadInfo();

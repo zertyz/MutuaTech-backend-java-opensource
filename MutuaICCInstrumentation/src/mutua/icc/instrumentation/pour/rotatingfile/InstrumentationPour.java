@@ -1,10 +1,12 @@
-package mutua.icc.instrumentation.pour.console;
+package mutua.icc.instrumentation.pour.rotatingfile;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.IInstrumentableProperty;
-import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
-import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.icc.instrumentation.pour.SerializationRules;
 import mutua.serialization.ISerializationRule;
@@ -13,25 +15,26 @@ import mutua.serialization.SerializationRepository;
 /** <pre>
  * InstrumentationPour.java
  * ========================
- * (created by luiz, Jan 21, 2015)
+ * (created by luiz, Feb 4, 2015)
  *
- * Implements the CONSOLE version of 'IInstrumentationData'
+ * Implements the ROTATING_FILE version of 'IInstrumentationData'
  *
- * @see IInstrumentationPour
+ * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
 
-public class InstrumentationPour implements IInstrumentationPour, InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> {
-
+public class InstrumentationPour implements IInstrumentationPour {
 
 	private ISerializationRule<InstrumentationEventDto> logEventDtoSerializationRule;
 	private SerializationRepository serializer;
+	private FileOutputStream fout;
 
-	public InstrumentationPour(IInstrumentableProperty[] instrumentationProperties) {
+	public InstrumentationPour(IInstrumentableProperty[] instrumentationProperties, String logFileName) throws FileNotFoundException {
 		serializer = new SerializationRepository(instrumentationProperties);
 		logEventDtoSerializationRule = new SerializationRules(serializer);
 		serializer.addSerializationRule(logEventDtoSerializationRule);
+		fout = new FileOutputStream(logFileName, true);
 	}
 
 	@Override
@@ -45,10 +48,11 @@ public class InstrumentationPour implements IInstrumentationPour, Instrumentatio
 	@Override
 	@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT",
 	                "APPLICATION_INSTRUMENTATION_EVENT"})
-	public void storeInstrumentableEvent(InstrumentationEventDto event) {
+	public void storeInstrumentableEvent(InstrumentationEventDto event) throws IOException {
 		StringBuffer logLine = new StringBuffer();
 		serializer.serialize(logLine, event);
-		System.out.println(logLine);
+		logLine.append('\n');
+		fout.write(logLine.toString().getBytes());
 	}
 
 	@Override

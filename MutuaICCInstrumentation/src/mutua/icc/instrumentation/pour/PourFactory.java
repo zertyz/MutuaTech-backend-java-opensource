@@ -1,5 +1,8 @@
 package mutua.icc.instrumentation.pour;
 
+import java.io.FileNotFoundException;
+import java.util.Hashtable;
+
 import mutua.icc.instrumentation.IInstrumentableProperty;
 
 /** <pre>
@@ -20,51 +23,52 @@ public class PourFactory {
 		RAM,
 		CONSOLE,
 		POSTGRESQL_DATABASE,
-		ROLLING_FILE,
-		COMPRESSED_ROLLING_FILE,
+		ROTATING_FILE,
+		COMPRESSED_ROTATING_FILE,
 		NETWORK,
 	};
 	
-	// configurable values
-	public static EInstrumentationDataPours DEFAULT_POUR = EInstrumentationDataPours.CONSOLE;
-	
 	// the multiton instances
-	private static final PourFactory[] instances = new PourFactory[EInstrumentationDataPours.values().length];
+	private static final Hashtable<String, PourFactory> instances = new Hashtable<String, PourFactory>();
 
 	
 	private IInstrumentationPour ip;
 	
 	
-	private PourFactory(EInstrumentationDataPours pourType, IInstrumentableProperty[] instrumentationProperties) {
+	/** Creates a set of pours with the following 'descriptorReference' (a file name, a network connection, etc.) */
+	private PourFactory(EInstrumentationDataPours pourType, IInstrumentableProperty[] instrumentationProperties, String descriptorReference) {
 		
 		switch (pourType) {
-			case RAM:
-				ip = new mutua.icc.instrumentation.pour.ram.InstrumentationPour();
-				break;
+			case POSTGRESQL_DATABASE:
+			case NETWORK:
+			case COMPRESSED_ROTATING_FILE:
+			case ROTATING_FILE:
+				try {
+					ip = new mutua.icc.instrumentation.pour.rotatingfile.InstrumentationPour(instrumentationProperties, descriptorReference);
+					break;
+				} catch (FileNotFoundException e) {
+					System.out.println("mutua.Instrumentation: Error creating a ROTATING_FILE log pour for file '"+descriptorReference+"'. Falling back to 'CONSOLE'");
+					e.printStackTrace();
+				}
 			case CONSOLE:
 				ip = new mutua.icc.instrumentation.pour.console.InstrumentationPour(instrumentationProperties);
 				break;
-			case POSTGRESQL_DATABASE:
-			case ROLLING_FILE:
-			case COMPRESSED_ROLLING_FILE:
-			case NETWORK:
+			case RAM:
+				ip = new mutua.icc.instrumentation.pour.ram.InstrumentationPour();
+				break;
 			default:
 				throw new RuntimeException("Don't now how to build an instance of " + pourType.name());
 		}
 		
 	}
 
-	public static IInstrumentationPour getInstrumentationPour(EInstrumentationDataPours pourType, IInstrumentableProperty[] instrumentationProperties) {
-		if (instances[pourType.ordinal()] != null) {
-			return instances[pourType.ordinal()].ip;
-		} else {
-			instances[pourType.ordinal()] = new PourFactory(pourType, instrumentationProperties);
-			return getInstrumentationPour(pourType, instrumentationProperties);
+	/** Gets the instrumentation pours with the following 'descriptorReference' (a file name, a network connection, etc.) */
+	public static IInstrumentationPour getInstrumentationPour(EInstrumentationDataPours pourType, String descriptorReference, IInstrumentableProperty[] instrumentationProperties) {
+		String key = pourType.name() + ((descriptorReference!=null)?descriptorReference:"");
+		if (!instances.containsKey(key)) {
+			instances.put(key, new PourFactory(pourType, instrumentationProperties, descriptorReference));
 		}
+		return instances.get(key).ip;
 	}
 
-	public static IInstrumentationPour getInstrumentationPour(IInstrumentableProperty[] instrumentationProperties) {
-		return getInstrumentationPour(DEFAULT_POUR, instrumentationProperties);
-	}
-	
 }

@@ -9,8 +9,6 @@ import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
-import mutua.icc.instrumentation.pour.IInstrumentationPour;
-import mutua.icc.instrumentation.pour.PourFactory;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 import mutua.imi.IndirectMethodNotFoundException;
 
@@ -30,7 +28,8 @@ import org.junit.Test;
 
 public class InstrumentationTests {
 	
-	private static Instrumentation<InstrumentationTestRequestProperty, String> log = new Instrumentation<InstrumentationTestRequestProperty, String>("InstrumentationTests", new InstrumentationTestRequestProperty("testProcedure"), InstrumentationEvents.values());
+	private static Instrumentation<InstrumentationTestRequestProperty, String> log = new Instrumentation<InstrumentationTestRequestProperty, String>(
+			"InstrumentationTests", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
 	
 	@Test
 	public void simpleTest() {
@@ -82,8 +81,20 @@ public class InstrumentationTests {
 			}
 		});
 		log.reportRequestStart("customPropagableInstrumentationEventClientTest");
-		log.reportEvent(ONEPROP_EVENT);
+		log.reportEvent(ONEPROP_EVENT, DAY_OF_WEEK, "QSF");
 		log.reportRequestFinish();
 	}
 
+	@Test
+	public void oneEventForEachLogInstance() {
+		Instrumentation<InstrumentationTestRequestProperty, String> log1 = new Instrumentation<InstrumentationTestRequestProperty, String>(
+				"LogInstance1", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
+		Instrumentation<InstrumentationTestRequestProperty, String> log2 = new Instrumentation<InstrumentationTestRequestProperty, String>(
+				"LogInstance2", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
+		Instrumentation<InstrumentationTestRequestProperty, String> log3 = new Instrumentation<InstrumentationTestRequestProperty, String>(
+				"LogInstance3", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, "differentKey", InstrumentationEvents.values());
+		log1.reportDebug("This should go only to log1");
+		log2.reportDebug("This should go only to log2");
+		log3.reportDebug("This should go only to log3");
+	}
 }

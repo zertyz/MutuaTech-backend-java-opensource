@@ -4,8 +4,10 @@ import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 import java.util.Hashtable;
 
-import mutua.icc.instrumentation.InstrumentableEvent;
 import mutua.icc.instrumentation.IInstrumentableProperty;
+import mutua.icc.instrumentation.InstrumentableEvent;
+import mutua.serialization.ISerializationRule;
+import mutua.serialization.SerializationRepository;
 
 /** <pre>
  * EventDto.java
@@ -73,60 +75,11 @@ public class InstrumentationEventDto {
 	}
 
 	public Object getValue(IInstrumentableProperty property) {
-		return properties.get(property.getInstrumentationPropertyName());
-	}
-
-	
-	/************************
-	** LOG & SERIALIZATION **
-	************************/
-	
-	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd|HH:mm:ss.SSS|zzz");
-	private static FieldPosition fp = new FieldPosition(0);
-	
-	private static String[][] stringEscapeSequences = {
-		{"\n", "\\\\n"},
-		{"\r", "\\\\r"},
-		{"\t", "\\\\t"},
-	};
-
-	@Override
-	public String toString() {
-		StringBuffer sb = new StringBuffer();
-		sdf.format(currentTimeMillis, sb, fp);
-		sb.append("|").append(currentTimeMillis).append(", ").
-		append(applicationName).append('-').append(threadInfo).append(": ").
-		append(event.getName());
-		IInstrumentableProperty[] eventProperties = event.getProperties();
-		if (eventProperties.length > 0) {
-			sb.append(" {");
-			for (int i=0; i<eventProperties.length; i++) {
-				IInstrumentableProperty property = eventProperties[i];
-				sb.append(property.getInstrumentationPropertyName()).append(" = ");
-				Object value = properties.get(property.getInstrumentationPropertyName());
-				Class<?> type = property.getType();
-				if (type == Integer.TYPE) {
-					sb.append((Integer)value);
-				} else if (type == Long.TYPE) {
-					sb.append((Long)value);
-				} else if (type == String.class) {
-					String s = (String)value;
-					for (int j=0; j<stringEscapeSequences.length; j++) {
-						s = s.replaceAll(stringEscapeSequences[j][0], stringEscapeSequences[j][1]);
-					}
-					sb.append('"').append(s).append('"');
-				} else {
-					sb.append('{');
-					property.appendSerializedValue(sb, value);
-					sb.append('}');
-				}
-				if (i < (eventProperties.length-1)) {
-					sb.append(", ");
-				}
-			}
-			sb.append("}");
+		try {
+			return properties.get(property.getInstrumentationPropertyName());
+		} catch (NullPointerException e) {
+			throw new RuntimeException("Missing property value for property '"+property.getInstrumentationPropertyName()+"' on an instrumentation log line for event '"+getEvent().getName()+"'");
 		}
-		return sb.toString();
 	}
-
+	
 }

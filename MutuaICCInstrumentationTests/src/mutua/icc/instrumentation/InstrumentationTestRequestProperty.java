@@ -16,12 +16,6 @@ package mutua.icc.instrumentation;
 
 public class InstrumentationTestRequestProperty implements IInstrumentableProperty {
 
-	private String testName;
-	
-	public InstrumentationTestRequestProperty(String testName) {
-		this.testName = testName;
-	}
-
 	@Override
 	public String getInstrumentationPropertyName() {
 		return "testName";
@@ -29,7 +23,7 @@ public class InstrumentationTestRequestProperty implements IInstrumentableProper
 
 	@Override
 	public Class<?> getType() {
-		return testName.getClass();
+		return String.class;
 	}
 
 	@Override

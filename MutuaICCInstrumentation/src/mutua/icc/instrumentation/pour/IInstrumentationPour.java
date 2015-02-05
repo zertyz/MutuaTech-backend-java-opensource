@@ -1,5 +1,7 @@
 package mutua.icc.instrumentation.pour;
 
+import java.io.IOException;
+
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
@@ -27,7 +29,7 @@ public interface IInstrumentationPour extends InstrumentationPropagableEventsCli
 	public abstract void reset();
 	
 	/** Stores, for later reference, an instrumentable event without any property */
-	public abstract void storeInstrumentableEvent(InstrumentationEventDto event);
+	public abstract void storeInstrumentableEvent(InstrumentationEventDto event) throws IOException;
 
 	/** Returns a descriptor to start an instrumentation data traversal, since the beginning of history.
 	 * -1 is returned if the limit of opened descriptors have been reached */

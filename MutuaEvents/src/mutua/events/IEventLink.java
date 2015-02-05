@@ -13,7 +13,9 @@ import mutua.imi.IndirectMethodNotFoundException;
  * ===============
  * (created by luiz, Jan 23, 2015)
  *
- * Defines how event servers and clients will communicate
+ * Defines how event servers and clients will communicate.
+ * 
+ * Each 'EventServer' instance must have his own 'IEventLink' instance for them behave like different instances 
  *
  * @see DirectEventLink, NonblockingEventLink, QueueEventLink 
  * @version $Id$

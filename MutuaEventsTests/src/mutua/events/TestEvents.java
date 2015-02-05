@@ -84,6 +84,33 @@ public class TestEvents {
 		
 		eventServer.reportListenableExampleEvent("this should be heard by clients 1 and 2");
 	}
+	
+	@Test
+	public void testTwoEventServersAndTwoEventListeners() throws IndirectMethodNotFoundException {
+		
+		class myEventClient implements EventClient<ETestEventServices> {
+			private String clientId;
+			public myEventClient(String clientId) {
+				this.clientId = clientId;
+			}
+			@EventListener({"LISTENABLE_EVENT_EXAMPLE"})
+			public void listenToSomeListenableEvents(String param) {
+				System.out.println("listened event by 'clientId' "+clientId+": " + param);
+			}
+		};
+		
+		IEventLink<ETestEventServices> link1 = new DirectEventLink<ETestEventServices>(ETestEventServices.class);
+		IEventLink<ETestEventServices> link2 = new DirectEventLink<ETestEventServices>(ETestEventServices.class);
+		TestEventServer eventServer1 = new TestEventServer(link1);
+		myEventClient   eventClient1 = new myEventClient("client 1 for server 1");
+		eventServer1.addClient(eventClient1);
+		TestEventServer eventServer2 = new TestEventServer(link2);
+		myEventClient   eventClient2 = new myEventClient("client 2 for server 2");
+		eventServer2.addClient(eventClient2);
+		
+		eventServer1.reportListenableExampleEvent("this should be heard only by client 1, for server 1");
+		eventServer2.reportListenableExampleEvent("this should be heard only by client 2, for server 2");
+	}
 
 	@Test(expected=RuntimeException.class)
 	public void testReportedExceptions() throws IndirectMethodNotFoundException {
