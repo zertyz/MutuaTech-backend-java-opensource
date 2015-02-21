@@ -82,7 +82,7 @@ public class SerializationRepository {
 				}
 			}
 		} else if ((instanceType == Integer.TYPE) || (instanceType == Long.TYPE) ||
-		           (instanceType == Number.class) ||
+		           (instanceType == Number.class) || (instanceType == Boolean.class) ||
 		           (instanceType == StringBuffer.class) || (instanceType == Enum.class)) {
 			buffer.append(instance);
 		} else {

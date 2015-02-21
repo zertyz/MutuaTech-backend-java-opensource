@@ -59,6 +59,9 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	
 	@Override
 	protected String[][] getTableDefinitions() {
+		if (!ALLOW_DATABASE_ADMINISTRATION) {
+			return null;
+		}
 		return new String[][] {
 			{queueTableName, "CREATE TABLE "+queueTableName+"(" +
 			                 "eventId    SERIAL        NOT NULL PRIMARY KEY, " +

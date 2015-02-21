@@ -1,13 +1,29 @@
 package mutua.icc.configuration;
 
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.*;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.*;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_BOOLEAN_PROPERTY;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_CLASS;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_ENUMERATION_PROPERTY;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_NUMBER_PROPERTY;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_STRING_ARRAY_PROPERTY;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_STRING_PROPERTY;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_DESSERIALIZATION_ERROR;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_LOADING_CONFIGURATION_FILE;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CLASS;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_BOOLEAN_FIELD_VALUE;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_ENUMERATION_FIELD_VALUE;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_FIELD_NAME;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_NUMBER_FIELD_VALUE;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_STRING_ARRAY_FIELD_VALUE;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_STRING_FIELD_VALUE;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_ERROR_MSG;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_FILE_NAME;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
@@ -49,17 +65,38 @@ public class ConfigurationManager {
 			}
 			String comment = configurableAnnotation.value();
 			if (comment.equals("")) {
-				String commentReferenceField = configurableAnnotation.sameAs();
-				String className = commentReferenceField.replaceAll("(.*)\\.(.*)", "$1");
-				String fieldName = commentReferenceField.replaceAll("(.*)\\.(.*)", "$2");
-				try {
-					// resolve class and field names
-					Class<?> referencedClass = Class.forName(className);
-					Field referencedField = referencedClass.getField(fieldName);
-					ConfigurableElement referencedConfigurableAnnotation = referencedField.getAnnotation(ConfigurableElement.class);
-					comment = referencedConfigurableAnnotation.value();
-				} catch (Throwable t) {
-					comment = "same as field '"+commentReferenceField+"' (reference not found)";
+				String commentReferenceField   = configurableAnnotation.sameAs();
+				String commentReferenceMethod  = configurableAnnotation.sameAsMethod();
+				if (!commentReferenceField.equals("")) {
+					String className = commentReferenceField.replaceAll("(.*)\\.(.*)", "$1");
+					String fieldName = commentReferenceField.replaceAll("(.*)\\.(.*)", "$2");
+					try {
+						// resolve class and field names
+						Class<?> referencedClass = Class.forName(className);
+						Field referencedField = referencedClass.getField(fieldName);
+						ConfigurableElement referencedConfigurableAnnotation = referencedField.getAnnotation(ConfigurableElement.class);
+						comment = referencedConfigurableAnnotation.value();
+					} catch (Throwable t) {t.printStackTrace();
+						comment = "same as field '"+commentReferenceField+"' (reference not found) -- "+t.getMessage();
+					}
+				} else if (!commentReferenceMethod.equals("")) {
+					String className  = commentReferenceMethod.replaceAll("(.*)\\.(.*)", "$1");
+					String methodName = commentReferenceMethod.replaceAll("(.*)\\.(.*)", "$2");
+					try {
+						// resolve class and field names
+						Class<?> referencedClass = Class.forName(className);
+						for (Method referencedMethod : referencedClass.getDeclaredMethods()) {
+							if (referencedMethod.getName().equals(methodName)) {
+								ConfigurableElement referencedConfigurableAnnotation = referencedMethod.getAnnotation(ConfigurableElement.class);
+								if (referencedConfigurableAnnotation != null) {
+									comment = referencedConfigurableAnnotation.value();
+									break;
+								}
+							}
+						}
+					} catch (Throwable t) {
+						comment = "same as method '"+commentReferenceMethod+"' (reference not found)";
+					}
 				}
 			}
 			buffer.append("# ").append(comment).append('\n');
@@ -88,6 +125,9 @@ public class ConfigurationManager {
 					      replaceAll("\t",   "\\\\t");
 					buffer.append(fName).append("+=").append(s).append("\n");
 				}
+			} else if (fType == boolean.class) {
+				boolean b = (Boolean)fValue;
+				buffer.append(fName).append("=").append(b).append("\n");
 			} else if (fType.isEnum()) {
 				// add to the comment line
 				buffer.deleteCharAt(buffer.length()-1);
@@ -161,6 +201,11 @@ public class ConfigurationManager {
 				}
 				f.set(null, ss);
 				log.reportEvent(IE_CONFIGURING_STRING_ARRAY_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_STRING_ARRAY_FIELD_VALUE, ss);
+			} else if (fType == boolean.class) {
+				String s = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
+				boolean b = Boolean.parseBoolean(s);
+				f.set(null, b);
+				log.reportEvent(IE_CONFIGURING_BOOLEAN_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_BOOLEAN_FIELD_VALUE, b);
 			} else if (fType.isEnum()) DONE: {
 				String e = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
 				for (Object enumConstant: fType.getEnumConstants()) {

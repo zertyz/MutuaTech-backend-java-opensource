@@ -35,6 +35,7 @@ public enum MutuaICCConfigurationInstrumentationProperties implements IInstrumen
 	IP_CONFIGURATION_FIELD_NAME               ("fieldName", String.class),
 	IP_CONFIGURATION_STRING_FIELD_VALUE       ("value",     String.class),
 	IP_CONFIGURATION_NUMBER_FIELD_VALUE       ("value",     long.class),
+	IP_CONFIGURATION_BOOLEAN_FIELD_VALUE      ("value",     Boolean.class),
 	IP_CONFIGURATION_STRING_ARRAY_FIELD_VALUE ("values",    String[].class),
 	IP_CONFIGURATION_ENUMERATION_FIELD_VALUE  ("value",     Enum.class),
 	

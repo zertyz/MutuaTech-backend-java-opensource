@@ -5,6 +5,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Enumeration;
 
 /** <pre>
  * ConfigurationElement.java
@@ -19,7 +20,7 @@ import java.lang.annotation.Target;
  * @author luiz
  */
 
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ConfigurableElement {
@@ -28,7 +29,14 @@ public @interface ConfigurableElement {
 	String value() default "";
 
 	/** This should be specified when declaring an existing configuration property.
-	 * sameAs := "package.className.publicStaticFieldName" */
+	 *  sameAs := "package.className.publicStaticFieldName"
+	 *  if using on inner class enumerations:
+	 *  sameAs := "package.className$EnumName.ENTRY_NAME" */
 	String sameAs() default "";
+
+	/** Through this property, the annotation will get the comment from the methods javadoc, if we could. Since we cant, you must annotate the method
+	 *  with annotation: @ConfigurableElement("this was supposed to be the method's javadoc") void shittyMethod() {};
+	 *  sameAsMethod := "package.className.MethodName" */
+	String sameAsMethod() default "";
 
 }

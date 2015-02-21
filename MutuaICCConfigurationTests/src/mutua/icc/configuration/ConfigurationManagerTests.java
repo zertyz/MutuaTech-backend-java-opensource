@@ -62,16 +62,30 @@ public class ConfigurationManagerTests {
 		checkSerializationAndDesserialization(cm);
 		checkSaveAndLoadFromFile(cm);
 		log.reportRequestFinish();
+		shittyMethod();
+	}
+	
+	@ConfigurableElement("This is a shitty method's javadoc to demonstrate that configurable elements may get their comments elsewhere")
+	public static boolean shittyMethod() {
+		return true;
 	}
 	
 }
 
 class OneOfEachValueConfigurableClass {
 	
-	public enum ESomeNumbers {ONE, TWO, THREE};
+	public enum ESomeNumbers {ONE, TWO, @ConfigurableElement("May be too much")THREE};
+	
+	static {
+		// fucking java... the right way to reference it in 1.6 is as described in 'myThirdChoice', with an '$'
+		System.out.println(ESomeNumbers.ONE.getClass().getCanonicalName());
+	}
 	
 	@ConfigurableElement("This is the dump example. It is a freestyle String -- therefore, can have any value")
 	public static String text = "this is a string";
+	
+	@ConfigurableElement(sameAsMethod="mutua.icc.configuration.ConfigurationManagerTests.shittyMethod")
+	public static boolean bool  = true;
 	
 	@ConfigurableElement("This is an integer. Don't attempt to set any dotted values to it. Negatives are fine")
 	public static int intNumber = 10;
@@ -83,9 +97,12 @@ class OneOfEachValueConfigurableClass {
 	public static String[] nicePlaces = {"Ilha Grande", "Ubatuba", "Maromba"};
 	
 	@ConfigurableElement("Now with enums")
-	public static ESomeNumbers myChoice = ESomeNumbers.TWO;
+	public static final ESomeNumbers myFirstChoice = ESomeNumbers.ONE;
 	
-	@ConfigurableElement(sameAs="mutua.icc.configuration.OneOfEachValueConfigurableClass.myChoice")
-	public static ESomeNumbers myOtherChoice = ESomeNumbers.THREE;
+	@ConfigurableElement(sameAs="mutua.icc.configuration.OneOfEachValueConfigurableClass.myFirstChoice")
+	public static ESomeNumbers mySecondChoice = ESomeNumbers.TWO;
+	
+	@ConfigurableElement(sameAs="mutua.icc.configuration.OneOfEachValueConfigurableClass$ESomeNumbers.THREE")
+	public static ESomeNumbers myThirdChoice = ESomeNumbers.THREE;
 	
 }
