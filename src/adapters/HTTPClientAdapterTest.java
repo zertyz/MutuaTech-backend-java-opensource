@@ -5,7 +5,10 @@ import static org.junit.Assert.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.Charset;
 import java.util.List;
+
+import javax.swing.text.StyleConstants.CharacterConstants;
 
 import org.junit.Test;
 
@@ -58,8 +61,8 @@ public class HTTPClientAdapterTest {
 		request_data.addParameter("q", "zertyz' blog");
 		request_data.addHeader("User-Agent", "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4");
 		String response = HTTPClientAdapter.requestGet("http://www.google.com.br/search", request_data, "UTF-8");
-		boolean found = response.indexOf("http://sites.google.com/site/zertyzblog") != -1;
-		assertTrue("Wage Mobile's site wasn't found among google search results", found);
+		boolean found = response.indexOf("https://sites.google.com/site/zertyzblog") != -1;
+		assertTrue("zertyz' blog wasn't found among google search results", found);
 	}
 	
 	@Test
@@ -106,10 +109,10 @@ public class HTTPClientAdapterTest {
 	public void localServerTest() throws IOException, InterruptedException {
 		
 		// setup the server
-		SimpleHTTPServer.start(8080, new ISimpleHTTPServerHandler[] {
+		SimpleHTTPServer.start(8888, new ISimpleHTTPServerHandler[] {
 			ISimpleHTTPServerHandler.getStaticHandler("/test", new String[][] {{"myheader",  "myvalue1"}, {"myheader", "myvalue2"}}, "This is the response".getBytes()),
 		});
-		String url = "http://localhost:8080/test";
+		String url = "http://localhost:8888/test";
 		
 		//Thread.sleep(60000);
 		
@@ -118,6 +121,15 @@ public class HTTPClientAdapterTest {
 		request.addHeader("h1", "h1v1");
 		request.addHeader("h2", "h2v1");
 		request.addHeader("h1", "h1v2");
+
+		// TODO it is not possible to encode binary data due to urlencode also reencoding it with our fixed utf-8 format. how to fix this shit?
+		//for (String charsetName : Charset.availableCharsets().keySet()) {
+		//	System.out.println(charsetName);
+		//}
+		//request.addParameter("bytes", new String(new byte[] {1, 2, 3, 4, 5, 126, 127, (byte)128, /*(byte)128, (byte)129, (byte)251, (byte)252, (byte)253, (byte)254, (byte)255*/}, "ISO-8859-1"));
+		//request.addParameter("bytes", new String(new char[] {1, 2, 3, 4, 5, 126, 127, Char, /*(byte)128, (byte)129, (byte)251, (byte)252, (byte)253, (byte)254, (byte)255*/}));
+		request.addEncodedParameter("bytes", "%00%01%02%7F%80%81%FD%FE%FF");
+		
 		HTTPResponseDto response = HTTPClientAdapter.requestGet(url, request);
 		
 		System.out.println(request);

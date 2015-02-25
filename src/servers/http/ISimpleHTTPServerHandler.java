@@ -89,11 +89,14 @@ public abstract class ISimpleHTTPServerHandler {
 	public HttpHandler getHttpHandler() {
 		return new HttpHandler() {
 	        public void handle(HttpExchange t) throws IOException {
-	        	SimpleHTTPServer.logRequest(t.getHttpContext().getPath(), System.currentTimeMillis(), t.getRequestHeaders());
-	        	for (String[] header : getHeaders()) {
-	        		String headerKey   = header[0];
-	        		String headerValue = header[1];
-		            t.getResponseHeaders().add(headerKey, headerValue);
+	        	SimpleHTTPServer.logRequest(t.getHttpContext().getPath(), t.getRequestURI().getRawQuery(), System.currentTimeMillis(), t.getRequestHeaders());
+	        	String[][] headers = getHeaders();
+	        	if (headers != null) {
+		        	for (String[] header : getHeaders()) {
+		        		String headerKey   = header[0];
+		        		String headerValue = header[1];
+			            t.getResponseHeaders().add(headerKey, headerValue);
+		        	}
 	        	}
 	        	byte[] response = getResponse();
 	            t.sendResponseHeaders(200, response.length);
