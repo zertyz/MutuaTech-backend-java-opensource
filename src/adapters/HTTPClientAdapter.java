@@ -58,19 +58,36 @@ public class HTTPClientAdapter {
 			return "";
 		}
 		
-		String queryString = "";		
-		Enumeration<String> parameters = requestData.getParametersEnumeration();
-		
-		while (parameters.hasMoreElements()) {
-			String parameter = parameters.nextElement();
-			String value = requestData.getParameter(parameter);
-			queryString += URLEncoder.encode(parameter, "UTF-8") + "=" + URLEncoder.encode(value, "UTF-8");
-			if (parameters.hasMoreElements()) {
-				queryString += "&";
+		StringBuffer queryString = new StringBuffer();
+		Enumeration<String> encodedParameters = requestData.getEncodedParametersEnumeration();		
+		Enumeration<String> parameters = requestData.getParametersEnumeration();		
+
+		// add already encoded parameters
+		while (encodedParameters.hasMoreElements()) {
+			String encodedParameter = encodedParameters.nextElement();
+			String encodedValue     = requestData.getEncodedParameter(encodedParameter);
+			queryString.append(encodedParameter).
+			            append('=').
+			            append(encodedValue);
+			if (encodedParameters.hasMoreElements() || parameters.hasMoreElements()) {
+				queryString.append('&');
 			}
 		}
 		
-		return queryString;
+		
+		// add parameters that need to be url encoded
+		while (parameters.hasMoreElements()) {
+			String parameter = parameters.nextElement();
+			String value     = requestData.getParameter(parameter);
+			queryString.append(URLEncoder.encode(parameter, "UTF-8")).
+			            append('=').
+			            append(URLEncoder.encode(value, "UTF-8"));
+			if (parameters.hasMoreElements()) {
+				queryString.append('&');
+			}
+		}
+		
+		return queryString.toString();
 	}
 	
 	// append the request headers to the http request

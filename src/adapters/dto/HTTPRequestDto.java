@@ -21,17 +21,25 @@ import adapters.HTTPClientAdapter;
 public class HTTPRequestDto {
 	
 	private Hashtable<String, String> parameters;
+	private Hashtable<String, String> encodedParameters;
 	private Hashtable<String, String> headers;
 	
 	
 	public HTTPRequestDto() {
-		parameters = new Hashtable<String, String>();
-		headers    = new Hashtable<String, String>();
+		parameters        = new Hashtable<String, String>();
+		encodedParameters = new Hashtable<String, String>();
+		headers           = new Hashtable<String, String>();
 	}
 	
 	public void addParameter(String name, String value) {
 		if (value != null) {
 			parameters.put(name, value);
+		}
+	}
+	
+	public void addEncodedParameter(String name, String value) {
+		if (value != null) {
+			encodedParameters.put(name, value);
 		}
 	}
 	
@@ -45,12 +53,20 @@ public class HTTPRequestDto {
 		return parameters.keys();
 	}
 	
+	public Enumeration<String> getEncodedParametersEnumeration() {
+		return encodedParameters.keys();
+	}
+	
 	public Enumeration<String> getHeadersEnumeration() {
 		return headers.keys();
 	}
 	
 	public String getParameter(String name) {
 		return parameters.get(name);
+	}
+	
+	public String getEncodedParameter(String name) {
+		return encodedParameters.get(name);
 	}
 	
 	public String getHeader(String name) {
