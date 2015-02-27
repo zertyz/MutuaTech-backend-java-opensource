@@ -26,8 +26,8 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 	class ConsumerWorker extends Thread {
 		@Override
 		public void run() {
-			System.out.println("A consumer started");
-			while (true) {
+			System.out.println("QueueEventLink: A consumer started");
+			while (true) try {
 				try {
 					IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = consumableEventsQueue.take();
 					for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndConsumerMethodInvokers.keySet()) try {
@@ -39,7 +39,11 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
+			} catch (Throwable t) {
+				System.out.println("QueueEventLink: A consumer worker method generated an uncouth exception");
+				t.printStackTrace();
 			}
+			//System.out.println("QueueEventLink: A consumer dyed");
 		}
 	}
 

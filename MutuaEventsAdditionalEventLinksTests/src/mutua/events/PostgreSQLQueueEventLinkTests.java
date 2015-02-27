@@ -47,6 +47,55 @@ public class PostgreSQLQueueEventLinkTests {
 	}
 
 	@Test
+	public void testDyingConsumers() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
+		log.reportRequestStart("testDyingConsumers");
+		String expectedMOPhone = "21991234899";
+		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
+		final String[] observedMOPhone = {""};
+		final String[] observedMOText  = {""};
+		final boolean[] firstRun       = {true};
+		
+		// set the number of workers to 1 to see if it will die
+		int oldValue = PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS;
+		PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS = 1;
+		
+		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "DyingQueue", new GenericQueueDataBureau());
+		TestEventServer eventServer = new TestEventServer(link);
+		
+		eventServer.addClient(new EventClient<ETestEventServices>() {
+			@EventConsumer({"MO_ARRIVED"})
+			public void receiveMOFromQueue(MO mo) {
+				if (firstRun[0]) {
+					firstRun[0] = false;
+					throw new RuntimeException("The first invocation must die, but the second should keep on");
+				}
+				observedMOPhone[0] = mo.phone;
+				observedMOText[0]  = mo.text;
+			}
+		});
+		
+		// add the first event -- this one must raise an exception to see if the worker thread will die
+		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
+		
+		// wait for the first event to be consumed
+		Thread.sleep(2000);
+		
+		assertFalse("First event was not consumed", firstRun[0]);
+		
+		// add the second event -- this one must be consumed if the worker didn't die because of the exception
+		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
+		
+		log.reportRequestFinish();
+		link.stop();
+		
+		assertEquals("Wrong 'phone' dequeued", expectedMOPhone, observedMOPhone[0]);
+		assertEquals("Wrong 'text'  dequeued", expectedMOText,  observedMOText[0]);
+		
+		// reset the number of workers
+		PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS = oldValue;
+	}
+
+	@Test	
 	public void testAddToQueueAndConsumeFromIt() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
 		log.reportRequestStart("testAddToQueueAndConsumeFromIt");
 		String expectedMOPhone = "21991234899";
