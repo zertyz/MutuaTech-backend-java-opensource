@@ -1,8 +1,7 @@
 package mutua.icc.configuration;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 import mutua.icc.configuration.annotations.ConfigurableElement;
@@ -10,6 +9,8 @@ import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /** <pre>
@@ -26,31 +27,61 @@ import org.junit.Test;
 
 public class ConfigurationManagerTests {
 	
+	
+	private static String defaultValues;
+
+
+	@BeforeClass
+	public static void saveDefaultValues() throws IllegalArgumentException, IllegalAccessException {
+		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		defaultValues = cm.serializeConfigurableClasses();
+	}
+
+	@Before
+	public void resetDefaultValues() throws IllegalArgumentException, IllegalAccessException {
+		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		cm.deserializeConfigurableClasses(defaultValues);
+	}
+
+
 	private static Instrumentation<DefaultInstrumentationProperties, String> log = new Instrumentation<DefaultInstrumentationProperties, String>(
 			"MutuaICCConfigurationTests", DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null);
 	
 	
-	private static void checkSerializationAndDesserialization(ConfigurationManager cm) throws IllegalArgumentException, IllegalAccessException {
+	private static void checkSerializationAndDeserialization(ConfigurationManager cm) throws IllegalArgumentException, IllegalAccessException {
 		String serializedFields = cm.serializeConfigurableClasses();
 		cm.deserializeConfigurableClasses(serializedFields);
 		String reserializedFields = cm.serializeConfigurableClasses();
-		assertEquals("Serialization/Desserialization of Configuration failed", serializedFields, reserializedFields);
+		assertEquals("Serialization/Deserialization of Configuration failed", serializedFields, reserializedFields);
+	}
+
+	/** Checks deserialization of the serialized values against current 'cm's class values */
+	private static void checkDeserialization(ConfigurationManager cm, String serializedFields) throws IllegalArgumentException, IllegalAccessException {
+		String originalSerialization = cm.serializeConfigurableClasses();
+		cm.deserializeConfigurableClasses(serializedFields);
+		String reserialization = cm.serializeConfigurableClasses();
+		assertEquals("Deserialization of Configuration failed", originalSerialization, reserialization);
 	}
 
 	public void checkSaveAndLoadFromFile(ConfigurationManager cm) throws IllegalArgumentException, IllegalAccessException, IOException {
 		cm.saveToFile("/tmp/config.tests");
 	}
 	
-
+	
 	@Test
 	public void testOneOfEachValueSerializationAndDesserializationClass() throws IllegalArgumentException, IllegalAccessException, IOException {
 		log.reportRequestStart("testSerializeConfigurationClass");
 		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
 		String serializedFields = cm.serializeConfigurableClasses();
 		System.out.println(serializedFields);
-		checkSerializationAndDesserialization(cm);
+		checkSerializationAndDeserialization(cm);
 		checkSaveAndLoadFromFile(cm);
 		log.reportRequestFinish();
+	}
+	
+	@ConfigurableElement("This is the shitty method's javadoc to demonstrate that configurable elements may get their comments elsewhere")
+	public static boolean shittyMethod() {
+		return true;
 	}
 	
 	@Test
@@ -58,16 +89,34 @@ public class ConfigurationManagerTests {
 		log.reportRequestStart("testConfigurationElementReference");
 		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
 		String serializedFields = cm.serializeConfigurableClasses();
+		boolean isMethodRefenceDocumentationPresent  = serializedFields.matches("(?s).*shitty method.*");
+		boolean isFieldReferenceDocumentationPresent = serializedFields.matches("(?s).*Now with enums.*");
 		System.out.println(serializedFields);
-		checkSerializationAndDesserialization(cm);
-		checkSaveAndLoadFromFile(cm);
+		assertTrue("Documentation reference to a method didn't work",      isMethodRefenceDocumentationPresent);
+		assertTrue("Documentation reference to a class field didn't work", isFieldReferenceDocumentationPresent);
 		log.reportRequestFinish();
-		shittyMethod();
+		shittyMethod();		// here just for you to hoover and see the javadoc through annotations
 	}
 	
-	@ConfigurableElement("This is a shitty method's javadoc to demonstrate that configurable elements may get their comments elsewhere")
-	public static boolean shittyMethod() {
-		return true;
+	@Test
+	public void testCommentedProperties() throws IllegalArgumentException, IllegalAccessException, IOException {
+		log.reportRequestStart("testCommentedProperties");
+		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		String serializedFields = cm.serializeConfigurableClasses();
+		// all these should be ignored by the parser:
+		String toBeIgnored = "#nicePlaces+=This one should not be loaded\n" +
+		                     "#MyFirstChoice=TWO\n" +
+		                     "#text=this is not the text i want...\n" +
+		                     "#bool=false\n" +
+		                     "#intNumber=-1\n" +
+		                     "#longNumber=-1\n" +
+		                     "#mySecondChoice=THREE\n" +
+		                     "#myThirdChoice=ONE\n";
+		serializedFields = "\n" + toBeIgnored + serializedFields + toBeIgnored;
+		System.out.println(serializedFields);
+		checkDeserialization(cm, serializedFields);
+		checkSaveAndLoadFromFile(cm);
+		log.reportRequestFinish();
 	}
 	
 }
@@ -81,7 +130,7 @@ class OneOfEachValueConfigurableClass {
 		System.out.println(ESomeNumbers.ONE.getClass().getCanonicalName());
 	}
 	
-	@ConfigurableElement("This is the dump example. It is a freestyle String -- therefore, can have any value")
+	@ConfigurableElement("This is the dumb example. It is a freestyle String -- therefore, can have any value")
 	public static String text = "this is a string";
 	
 	@ConfigurableElement(sameAsMethod="mutua.icc.configuration.ConfigurationManagerTests.shittyMethod")
@@ -97,7 +146,7 @@ class OneOfEachValueConfigurableClass {
 	public static String[] nicePlaces = {"Ilha Grande", "Ubatuba", "Maromba"};
 	
 	@ConfigurableElement("Now with enums")
-	public static final ESomeNumbers myFirstChoice = ESomeNumbers.ONE;
+	public static ESomeNumbers myFirstChoice = ESomeNumbers.ONE;
 	
 	@ConfigurableElement(sameAs="mutua.icc.configuration.OneOfEachValueConfigurableClass.myFirstChoice")
 	public static ESomeNumbers mySecondChoice = ESomeNumbers.TWO;

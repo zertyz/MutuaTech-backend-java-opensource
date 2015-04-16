@@ -1,22 +1,7 @@
 package mutua.icc.configuration;
 
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_BOOLEAN_PROPERTY;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_CLASS;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_ENUMERATION_PROPERTY;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_NUMBER_PROPERTY;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_STRING_ARRAY_PROPERTY;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_CONFIGURING_STRING_PROPERTY;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_DESSERIALIZATION_ERROR;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.IE_LOADING_CONFIGURATION_FILE;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CLASS;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_BOOLEAN_FIELD_VALUE;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_ENUMERATION_FIELD_VALUE;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_FIELD_NAME;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_NUMBER_FIELD_VALUE;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_STRING_ARRAY_FIELD_VALUE;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_CONFIGURATION_STRING_FIELD_VALUE;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_ERROR_MSG;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.IP_FILE_NAME;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.*;
+import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.*;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
@@ -24,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
@@ -162,36 +148,72 @@ public class ConfigurationManager {
 		}
 		return buffer.toString();
 	}
+	
+	private void logFieldNotPresentOnConfiguration(String type, Field f) throws IllegalArgumentException, IllegalAccessException {
+		log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is not present on configuration. Using default value of '"+f.get(null)+"'");
+	}
+	
+	private void logScalarFieldDeclaredAsVector(Field f, String[] values) {
+		log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Scalar property '"+f.getName()+"' was wrongly declared as an array containing values "+Arrays.deepToString(values));
+	}
+	
+	private String requestScalarValue(Field f, ConfigurationParser cp) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException {
+		String fieldName = f.getName();
+		String[] values = cp.getValues(fieldName);
+		// detect errors
+		if (values == null) {
+			logFieldNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
+		} else if ((values.length == 0) || (values.length > 1)) {
+			logScalarFieldDeclaredAsVector(f, values);
+		} else {
+			// if everything is ok
+			return values[0];
+		}
+		throw new java.lang.NoSuchFieldException();
+	}
 
-	protected void desserializeStaticFields(Class<?> configurableClass, String serializedFields) throws IllegalArgumentException, IllegalAccessException {
+	private String[] requestVectorValue(Field f, ConfigurationParser cp) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException {
+		String fieldName = f.getName();
+		String[] values = cp.getValues(fieldName);
+		// detect errors
+		if (values == null) {
+			logFieldNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
+			throw new java.lang.NoSuchFieldException();
+		} else {
+			return values;
+		}
+	}
+
+	protected void desserializeStaticFields(Class<?> configurableClass, ConfigurationParser cp) throws IllegalArgumentException, IllegalAccessException {
+		
+		// load the pertinent fields
 		Field[] fields = configurableClass.getDeclaredFields();
 		for (Field f : fields) try {
 			String fName   = f.getName();
 			Class<?> fType = f.getType();
-			if (fType == String.class) {
-				String s = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
+			if (fType == String.class) try {
+				String s = requestScalarValue(f, cp);
 				s = s.replaceAll("\\\\n",   "\n").
 				      replaceAll("\\\\r",   "\t").
 				      replaceAll("\\\\t",   "\t").
 				      replaceAll("\\\\\\\\", "\\\\");
 				f.set(null, s);
 				log.reportEvent(IE_CONFIGURING_STRING_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_STRING_FIELD_VALUE, s);
-			} else if (fType == long.class) {
-				String s = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
+			} catch (NoSuchFieldException e) {
+			} else if (fType == long.class) try {
+				String s = requestScalarValue(f, cp);
 				long l = Long.parseLong(s);
 				f.set(null, l);
 				log.reportEvent(IE_CONFIGURING_NUMBER_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_NUMBER_FIELD_VALUE, l);
-			} else if (fType == int.class) {
-				String s = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
+			} catch (NoSuchFieldException e) {
+			} else if (fType == int.class) try {
+				String s = requestScalarValue(f, cp);
 				int i = Integer.parseInt(s);
 				f.set(null, i);
 				log.reportEvent(IE_CONFIGURING_NUMBER_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_NUMBER_FIELD_VALUE, i);
-			} else if (fType == String[].class) {
-				String a = serializedFields.replaceAll("(?s)(\n?)"+fName+"\\+=([^\n]*)", "$1;@<!$2:#_%").
-				                            replaceAll("(?s).*?(;@<!.*:#_%).*", "$1").
-				                            replaceAll("(?s);@<!", "").
-				                            replaceAll("(?s):#_%", "");
-				String[] ss = a.split("\n");
+			} catch (NoSuchFieldException e) {
+			} else if (fType == String[].class) try {
+				String[] ss = requestVectorValue(f, cp);
 				for (int i=0; i<ss.length; i++) {
 					String s = ss[i].replaceAll("\\\\n",   "\n").
 					                 replaceAll("\\\\r",   "\t").
@@ -201,13 +223,15 @@ public class ConfigurationManager {
 				}
 				f.set(null, ss);
 				log.reportEvent(IE_CONFIGURING_STRING_ARRAY_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_STRING_ARRAY_FIELD_VALUE, ss);
-			} else if (fType == boolean.class) {
-				String s = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
+			} catch (NoSuchFieldException e) {
+			} else if (fType == boolean.class) try {
+				String s = requestScalarValue(f, cp);
 				boolean b = Boolean.parseBoolean(s);
 				f.set(null, b);
 				log.reportEvent(IE_CONFIGURING_BOOLEAN_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_BOOLEAN_FIELD_VALUE, b);
-			} else if (fType.isEnum()) DONE: {
-				String e = serializedFields.replaceAll("(?s).*?\n?"+fName+"=([^\n]*).*", "$1");
+			} catch (NoSuchFieldException e) {
+			} else if (fType.isEnum()) DONE: try {
+				String e = requestScalarValue(f, cp);
 				for (Object enumConstant: fType.getEnumConstants()) {
 					if (enumConstant.toString().equals(e)) {
 						f.set(null, enumConstant);
@@ -216,6 +240,7 @@ public class ConfigurationManager {
 					}
 				}
 				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Value '"+e+"' is not recognized as a valid value for Enum '"+fType.getCanonicalName()+"'");
+			} catch (NoSuchFieldException e) {
 			} else {
 				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Don't know how to desserialize type '"+fType.getCanonicalName()+"'");
 			}
@@ -225,9 +250,28 @@ public class ConfigurationManager {
 	}
 	
 	protected void deserializeConfigurableClasses(String serializedFields) throws IllegalArgumentException, IllegalAccessException {
-		for (Class<?> configurableClass : configurableClasses) {
-			desserializeStaticFields(configurableClass, serializedFields);
+
+		ConfigurationParser cp = new ConfigurationParser(serializedFields);
+		
+		// log configuration line format errors
+		for (Object[] errorLine : cp.getErrorLines()) {
+			int    errorLineNumber  = (Integer) errorLine[0];
+			String errorLineContent = (String)  errorLine[1];
+			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Configuration format error at line #"+errorLineNumber+": "+errorLineContent);
 		}
+		
+		try {
+			for (Class<?> configurableClass : configurableClasses) {
+				log.reportEvent(IE_CONFIGURING_CLASS, IP_CLASS, configurableClass);
+				desserializeStaticFields(configurableClass, cp);
+			}
+		} catch (Throwable t) {
+			log.reportThrowable(t, "Exception while attempting to load values into one of the provided configurable classes");
+			t.printStackTrace();
+			String originalSerializedFields = serializeConfigurableClasses();
+			log.reportDebug("Dumping the configuration model with default values for the provided classes: " + originalSerializedFields);
+		}
+			
 	}
 
 	public void loadFromFile(String filePath) throws IOException, IllegalArgumentException, IllegalAccessException {
@@ -239,18 +283,7 @@ public class ConfigurationManager {
 			fileContents.append(line).append('\n');
 		}
 		br.close();
-		try {
-			for (Class<?> configurableClass : configurableClasses) {
-				log.reportEvent(IE_CONFIGURING_CLASS, IP_CLASS, configurableClass);
-				desserializeStaticFields(configurableClass, fileContents.toString());
-			}
-		} catch (Throwable t) {
-			log.reportThrowable(t, "Exception while attempting to load values into one of the provided configurable classes");
-			t.printStackTrace();
-			String modelFilePath = filePath + ".model";
-			String serializedFields = serializeConfigurableClasses();
-			log.reportDebug("Dumping the configuration model with default values for the provided classes: " + serializedFields);
-		}
+		deserializeConfigurableClasses(fileContents.toString());
 	}
 
 	public void saveToFile(String filePath) throws IOException, IllegalArgumentException, IllegalAccessException {
