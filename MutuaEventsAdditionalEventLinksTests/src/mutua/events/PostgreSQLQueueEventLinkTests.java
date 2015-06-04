@@ -256,7 +256,7 @@ class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices
 		preparedProcedure.addParameter("PARAMETERS", serializedParameters.toString());
 	}
 	@Override
-	public IndirectMethodInvocationInfo<ETestEventServices> desserializeQueueEntry(int eventId, Object[] databaseRow) {
+	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
 		String serializedMethodId   = (String)databaseRow[0];
 		String serializedParameters = (String)databaseRow[1];
 		ETestEventServices methodId = ETestEventServices.valueOf(serializedMethodId);
@@ -277,7 +277,7 @@ class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventSe
 		preparedProcedure.addParameter("TEXT",    mo.text);
 	}
 	@Override
-	public IndirectMethodInvocationInfo<ETestEventServices> desserializeQueueEntry(int eventId, Object[] databaseRow) {
+	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
 		String carrier = (String)databaseRow[1];
 		String phone   = (String)databaseRow[2];
 		String text    = (String)databaseRow[3];

@@ -73,7 +73,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 					for (Object[] queueEntry : rowsOfQueueEntries) {
 						// queueEntry := { [the fields listed by 'dataBureau.getQueueElementFieldList'], eventId }
 						eventId = (Integer)queueEntry[queueEntry.length-1];
-						IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = dataBureau.desserializeQueueEntry(eventId, queueEntry);
+						IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = dataBureau.deserializeQueueEntry(eventId, queueEntry);
 						localEventDispatchingQueue.reportConsumableEvent(event);
 					}
 					// update the pointers

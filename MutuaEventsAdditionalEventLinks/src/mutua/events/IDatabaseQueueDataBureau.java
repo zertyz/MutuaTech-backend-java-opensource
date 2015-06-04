@@ -22,7 +22,7 @@ public abstract class IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> {
 	public abstract void serializeQueueEntry(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException;
 	
 	/** Receives 'databaseRow' (the return of the query 'FetchNextQueueElements') and returns the original queue 'entry' with the 'eventId' */
-	public abstract IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> desserializeQueueEntry(int eventId, Object[] databaseRow);
+	public abstract IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> deserializeQueueEntry(int eventId, Object[] databaseRow);
 	
 	/** returns the expression between VALUES() of 'InsertNewQueueElement' query, which will have their parameters fulfilled by 'serializeQueueEntry' */
 	public String getValuesExpressionForInsertNewQueueElementQuery()  {
