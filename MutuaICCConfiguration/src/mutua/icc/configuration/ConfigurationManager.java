@@ -139,7 +139,7 @@ public class ConfigurationManager {
 		return buffer.toString();
 	}
 	
-	protected String serializeConfigurableClasses() throws IllegalArgumentException, IllegalAccessException {
+	public String serializeConfigurableClasses() throws IllegalArgumentException, IllegalAccessException {
 		StringBuffer buffer = new StringBuffer();
 		for (Class<?> configurableClass : configurableClasses) {
 			buffer.append("\n\n// ").append(configurableClass.getCanonicalName()).
@@ -249,7 +249,7 @@ public class ConfigurationManager {
 		}
 	}
 	
-	protected void deserializeConfigurableClasses(String serializedFields) throws IllegalArgumentException, IllegalAccessException {
+	public void deserializeConfigurableClasses(String serializedFields) throws IllegalArgumentException, IllegalAccessException {
 
 		ConfigurationParser cp = new ConfigurationParser(serializedFields);
 		

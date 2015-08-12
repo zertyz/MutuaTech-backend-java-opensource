@@ -39,7 +39,7 @@ public class InstrumentationEventDto {
 	}
 
 	public InstrumentationEventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
-                    IInstrumentableProperty property, Object value) {
+		                           IInstrumentableProperty property, Object value) {
 		this(currentTimeMillis, applicationName, thread, event);
 		properties = new Hashtable<String, Object>();
 		if (value != null) {
@@ -48,10 +48,18 @@ public class InstrumentationEventDto {
 	}
 
 	public InstrumentationEventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
-	                IInstrumentableProperty property1, Object value1,
-	                IInstrumentableProperty property2, Object value2) {
+		                           IInstrumentableProperty property1, Object value1,
+		                           IInstrumentableProperty property2, Object value2) {
 		this(currentTimeMillis, applicationName, thread, event, property1, value1);
 		properties.put(property2.getInstrumentationPropertyName(), value2);
+	}
+
+	public InstrumentationEventDto(long currentTimeMillis, String applicationName, Thread thread, InstrumentableEvent event,
+		                           IInstrumentableProperty property1, Object value1,
+		                           IInstrumentableProperty property2, Object value2,
+		                           IInstrumentableProperty property3, Object value3) {
+		this(currentTimeMillis, applicationName, thread, event, property1, value1, property2, value2);
+		properties.put(property3.getInstrumentationPropertyName(), value3);
 	}
 
 	public long getCurrentTimeMillis() {

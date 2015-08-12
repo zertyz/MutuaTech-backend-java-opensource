@@ -15,6 +15,8 @@ import adapters.dto.PreparedProcedureInvocationDto;
  * (created by luiz, Jan 30, 2015)
  *
  * Provides 'PostgreSQLAdapter's to manipulate 'IEventLink' queue databases
+ * TODO I should study http://ledgersmbdev.blogspot.com.br/2012/09/objectrelational-interlude-messaging-in.html to improve this
+ * Also, Study LISTEN/NOTIFY PostgreSQL events
  *
  * @see RelatedClass(es)
  * @version $Id$
@@ -68,6 +70,7 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 			                 "methodId   VARCHAR(63)   NOT NULL, " +
 			                 fieldsCreationLine +
 			                 "ts        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP)"},
+			                 // a better primary key is (methodId, eventId)
 			{queueTableName+"Consumers", "CREATE TABLE "+queueTableName+"Consumers(" +
 			                             "methodId           VARCHAR(63)   NOT NULL UNIQUE, " +
 			                             "lastFetchedEventId INT           NOT NULL, " +
@@ -98,6 +101,7 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 //			{"FetchNextQueueElementIds",  "SELECT eventId FROM "+queueTableName+" WHERE methodId=${METHOD_ID} AND eventId > (" +
 //			                                  "SELECT lastFetchedEventId FROM "+queueTableName+"Consumers WHERE methodId=${METHOD_ID}) LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
 //			{"FetchQueueElementById",     "SELECT "+fieldListForFetchQueueElementById+" FROM "+queueTableName+" WHERE eventId=${EVENT_ID}"},
+			// a better query is SELECT MOSMSes.methodId, carrier, phone, text, eventId FROM MOSMSes, MOSMSesConsumers WHERE MOSMSes.methodId=MOSMSesConsumers.methodId AND MOSMSes.eventId > MOSMSesConsumers.lastFetchedEventId ORDER BY eventId ASC;
 			{"FetchNextQueueElements",    "SELECT "+queueElementFieldList+", eventId FROM "+queueTableName+" WHERE methodId=${METHOD_ID} AND eventId > (" +
 			                                  "SELECT lastFetchedEventId FROM "+queueTableName+"Consumers WHERE methodId=${METHOD_ID}) LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
 			{"InsertIntoFallbackQueue",   "INSERT INTO "+queueTableName+"Fallback(eventId) VALUES(${EVENT_ID})"},

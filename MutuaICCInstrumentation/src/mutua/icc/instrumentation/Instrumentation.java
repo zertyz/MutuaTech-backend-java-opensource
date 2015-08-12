@@ -96,6 +96,16 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		                                   property1, value1, property2, value2);
 	}
 
+	private InstrumentationEventDto getInstrumentationEvent(IInstrumentableEvent ievent,
+		                                                    IInstrumentableProperty property1, Object value1,
+		                                                    IInstrumentableProperty property2, Object value2,
+		                                                    IInstrumentableProperty property3, Object value3) {
+		long currentTimeMillis = System.currentTimeMillis();
+		Thread thread          = Thread.currentThread();
+		return new InstrumentationEventDto(currentTimeMillis, APPLICATION_NAME, thread, ievent.getInstrumentableEvent(),
+		                                   property1, value1, property2, value2, property3, value3);
+	}
+
 	private InstrumentationEventDto getInstrumentationEvent(IInstrumentableEvent ievent, IInstrumentableProperty property, Object value) {
 		long currentTimeMillis = System.currentTimeMillis();
 		Thread thread          = Thread.currentThread();
@@ -268,6 +278,14 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 		dispatchListenableEvent(EInstrumentationPropagableEvents.APPLICATION_INSTRUMENTATION_EVENT, instrumentationEvent);
 	}
 	
+	public void reportEvent(IInstrumentableEvent ievent,
+		                    IInstrumentableProperty property1, Object value1,
+		                    IInstrumentableProperty property2, Object value2,
+		                    IInstrumentableProperty property3, Object value3) {
+		InstrumentationEventDto instrumentationEvent = getInstrumentationEvent(ievent, property1, value1, property2, value2, property3, value3);
+		dispatchListenableEvent(EInstrumentationPropagableEvents.APPLICATION_INSTRUMENTATION_EVENT, instrumentationEvent);
+	}
+
 	public void reportDebug(String msg) {
 		reportEvent(DIE_DEBUG, DIP_MSG, msg);
 	}

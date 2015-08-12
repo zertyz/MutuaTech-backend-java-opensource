@@ -28,6 +28,11 @@ public class InstrumentableEvent implements IInstrumentableEvent {
 		this.properties = new IInstrumentableProperty[] {property1, property2};
 	}
 
+	public InstrumentableEvent(String name, IInstrumentableProperty property1, IInstrumentableProperty property2, IInstrumentableProperty property3) {
+		this.name       = name;
+		this.properties = new IInstrumentableProperty[] {property1, property2, property3};
+	}
+
 	public InstrumentableEvent(String name) {
 		this.name       = name;
 		this.properties = new IInstrumentableProperty[] {};
