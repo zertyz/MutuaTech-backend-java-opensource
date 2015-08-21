@@ -13,9 +13,11 @@ import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
+import mutua.smsappmodule.SplitRun;
 
 import org.junit.Test;
 
+import adapters.JDBCAdapter;
 import adapters.dto.PreparedProcedureInvocationDto;
 import adapters.exceptions.PreparedProcedureException;
 
@@ -38,12 +40,14 @@ public class PostgreSQLQueueEventLinkTests {
 	
 	// configure the database
 	static {
+		JDBCAdapter.CONNECTION_POOL_SIZE = 8;
+		JDBCAdapter.SHOULD_DEBUG_QUERIES = false;
 		QueuesPostgreSQLAdapter.log = log; 
-		QueuesPostgreSQLAdapter.HOSTNAME = "zertyz.heliohost.org";
+		QueuesPostgreSQLAdapter.HOSTNAME = "venus";
 		QueuesPostgreSQLAdapter.PORT     = 5432;
-		QueuesPostgreSQLAdapter.DATABASE = "zertyz_spikes";
-		QueuesPostgreSQLAdapter.USER     = "zertyz_user";
-		QueuesPostgreSQLAdapter.PASSWORD = "spikes";
+		QueuesPostgreSQLAdapter.DATABASE = "hangman";
+		QueuesPostgreSQLAdapter.USER     = "hangman";
+		QueuesPostgreSQLAdapter.PASSWORD = "hangman";
 	}
 
 	@Test
@@ -62,6 +66,8 @@ public class PostgreSQLQueueEventLinkTests {
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "DyingQueue", new GenericQueueDataBureau());
 		TestEventServer eventServer = new TestEventServer(link);
 		
+		link.resetQueues();
+		
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
 			public void receiveMOFromQueue(MO mo) {
@@ -78,7 +84,7 @@ public class PostgreSQLQueueEventLinkTests {
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 		
 		// wait for the first event to be consumed
-		Thread.sleep(2000);
+		Thread.sleep(100);
 		
 		assertFalse("First event was not consumed", firstRun[0]);
 		
@@ -106,6 +112,8 @@ public class PostgreSQLQueueEventLinkTests {
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "GenericQueue", new GenericQueueDataBureau());
 		TestEventServer eventServer = new TestEventServer(link);
 
+		link.resetQueues();
+		
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
 			public void receiveMOFromQueue(MO mo) {
@@ -122,13 +130,15 @@ public class PostgreSQLQueueEventLinkTests {
 		assertEquals("Wrong 'phone' dequeued", expectedMOPhone, observedMOPhone[0]);
 		assertEquals("Wrong 'text'  dequeued", expectedMOText,  observedMOText[0]);
 	}
-
+	
 	@Test
 	public void testAddSeveralItemsAndConsumeAllAtOnce() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		log.reportRequestStart("testAddSeveralItemsAndConsumeAllAtOnce");
+		log.reportRequestStart("testAddSeveralItemsAndConsumeAllAtOnce");		
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
 		final TestEventServer eventServer = new TestEventServer(link);
+		
+		link.resetQueues();
 
 		final long phoneStart = 21991234800L;
 		final Hashtable<String, String> receivedMOs = new Hashtable<String, String>();
@@ -136,14 +146,17 @@ public class PostgreSQLQueueEventLinkTests {
 		final int[] observedNumberOfEntries = {0};
 		final long[] firstAndLastConsumedEntriesTimeMillis = {-1, -1};	// := {first, last}
 		
+		// consumers
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
 			public void receiveMOFromQueue(MO mo) {
+				synchronized (observedNumberOfEntries) {
+					observedNumberOfEntries[0]++;
+				}
 				if (receivedMOs.containsKey(mo.phone)) {
 					fail("Double insertion attempt for phone '"+mo.phone+"'");
 				}
 				receivedMOs.put(mo.phone, mo.text);
-				observedNumberOfEntries[0]++;
 				if (firstAndLastConsumedEntriesTimeMillis[0] == -1) {
 					firstAndLastConsumedEntriesTimeMillis[0] = System.currentTimeMillis();
 				} else {
@@ -151,50 +164,18 @@ public class PostgreSQLQueueEventLinkTests {
 				}
 			}
 		});
-		
-		class Producer extends Thread {
-			long i;
-			public Producer(long i) {
-				this.i = i;
-			}
-			@Override
-			public void run() {
-				eventServer.addToMOQueue(new MO(Long.toString(i), "This is text number "+(i-phoneStart)));
-				synchronized (log) {
-					log.notify();
-				}
-			}
-		};
 
-		// create the (parallel) producers
-		Producer[] producers = new Producer[expectedNumberOfEntries];
-		for (long i=phoneStart; i<(phoneStart+expectedNumberOfEntries); i++) {
-			producers[(int)(i-phoneStart)] = new Producer(i);
-			producers[(int)(i-phoneStart)].start();
-			synchronized (log) {
-				log.wait();
-			}
-			//Thread.sleep(500);
-		}
-		// wait for the producers to finish
-		while (true) {
-			System.out.println("Waiting...");
-			boolean done = true;
-			for (int i=0; i<expectedNumberOfEntries; i++) {
-				if (producers[i].isAlive()) {
-					done = false;
-				}
-			}
-			if (done) {
-				break;
-			} else {
-				Thread.sleep(500);
-			}
+		// producer
+		for (long phone=phoneStart; phone<phoneStart+expectedNumberOfEntries; phone++) {
+			eventServer.addToMOQueue(new MO(Long.toString(phone), "This is text number "+(phone-phoneStart)));
 		}
 		
-		Thread.sleep(500);	// wait for the pending events to be dispatched
+		// wait for the pending events to be dispatched
+		while (link.hasPendingEvents()) {
+			Thread.sleep(10);
+		}
+
 		log.reportRequestFinish();
-		
 		link.stop();
 		
 		assertEquals("Wrong number of elements consumed", expectedNumberOfEntries, observedNumberOfEntries[0]);
@@ -264,39 +245,5 @@ class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices
 		String text  = serializedParameters.replaceAll(".*text='([^']*)'.*", "$1");
 		IndirectMethodInvocationInfo<ETestEventServices> entry = new IndirectMethodInvocationInfo<ETestEventServices>(methodId, new MO(phone, text));
 		return entry;
-	}
-}
-
-
-class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
-	@Override
-	public void serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException {
-		MO mo = (MO)entry.getParameters()[0];
-		preparedProcedure.addParameter("CARRIER", "testCarrier");
-		preparedProcedure.addParameter("PHONE",   mo.phone);
-		preparedProcedure.addParameter("TEXT",    mo.text);
-	}
-	@Override
-	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
-		String carrier = (String)databaseRow[1];
-		String phone   = (String)databaseRow[2];
-		String text    = (String)databaseRow[3];
-		MO mo = new MO(phone, text);
-		IndirectMethodInvocationInfo<ETestEventServices> entry = new IndirectMethodInvocationInfo<ETestEventServices>(ETestEventServices.MO_ARRIVED, mo);
-		return entry;
-	}
-	@Override
-	public String getValuesExpressionForInsertNewQueueElementQuery() {
-		return "${METHOD_ID}, ${CARRIER}, ${PHONE}, ${TEXT}";
-	}
-	@Override
-	public String getQueueElementFieldList() {
-		return "methodId, carrier, phone, text";
-	}
-	@Override
-	public String getFieldsCreationLine() {
-		return 	"carrier   VARCHAR(15) NOT NULL, " +
-                "phone     VARCHAR(15) NOT NULL, " +
-				"text      VARCHAR(160) NOT NULL, ";
 	}
 }

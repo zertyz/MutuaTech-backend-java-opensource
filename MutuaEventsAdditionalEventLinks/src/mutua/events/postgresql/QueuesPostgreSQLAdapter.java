@@ -26,6 +26,9 @@ import adapters.dto.PreparedProcedureInvocationDto;
 public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 
 
+	// the version information for database tables present on this class, to be stored on the 'Meta' table. Useful for future data conversions.
+	private static String modelVersionForMetaTable = "2015.08.20";
+	
 	// configuration
 	////////////////
 	
@@ -44,6 +47,13 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	public static String PASSWORD;
 	
 	
+	// fields set by the public get instance methods which must be set via the static field,
+	// since 'getTableDefinitions' is called before the instance fields can be set
+	private        String queueTableName;
+	private        String fieldsCreationLine;
+	private static String staticQueueTableName;
+	private static String staticFieldsCreationLine;
+	
 	private QueuesPostgreSQLAdapter(Instrumentation<?, ?> log, String[][] preparedProceduresDefinitions) throws SQLException {
 		super(log, preparedProceduresDefinitions);
 	}
@@ -53,46 +63,86 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		return new String[] {HOSTNAME, Integer.toString(PORT), DATABASE, USER, PASSWORD};
 	}
 
-	// fields set by the public get instance methods
-	////////////////////////////////////////////////
-	
-	private static String queueTableName     = null;
-	private static String fieldsCreationLine = null;
-	
+	@Override
+	protected String getDropDatabaseCommand() {
+		String statements = "";		
+		String[][] tableDefinitions = getTableDefinitions();
+		
+		for (String[] tableDefinition : tableDefinitions) {
+			String databaseName = tableDefinition[0];
+			statements += "DELETE FROM Meta WHERE tableName='"+databaseName+"';";
+		}
+		return super.getDropDatabaseCommand() + statements;
+	}
+
+
 	@Override
 	protected String[][] getTableDefinitions() {
 		if (!ALLOW_DATABASE_ADMINISTRATION) {
 			return null;
 		}
+		
+		// on the first run, set the instance fields based on the static ones
+		// (this is needed because the super constructor calls 'getTableDefinitions' before this constructor has the chance to set these fields)
+		if ((queueTableName == null) && (fieldsCreationLine == null)) {
+			if ((staticQueueTableName == null) || (staticFieldsCreationLine == null)) {
+				throw new RuntimeException("one of 'staticQueueTableName' or 'staticFieldsCreationLine' were not provided");
+			}
+			queueTableName     = staticQueueTableName;
+			fieldsCreationLine = staticFieldsCreationLine;
+			staticQueueTableName     = null;
+			staticFieldsCreationLine = null;
+		}
+		
 		return new String[][] {
-			{queueTableName, "CREATE TABLE "+queueTableName+"(" +
-			                 "eventId    SERIAL        NOT NULL PRIMARY KEY, " +
-			                 "methodId   VARCHAR(63)   NOT NULL, " +
-			                 fieldsCreationLine +
-			                 "ts        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP)"},
-			                 // a better primary key is (methodId, eventId)
 			{queueTableName+"Consumers", "CREATE TABLE "+queueTableName+"Consumers(" +
-			                             "methodId           VARCHAR(63)   NOT NULL UNIQUE, " +
+			                             "methodId           TEXT          PRIMARY KEY, " +
 			                             "lastFetchedEventId INT           NOT NULL, " +
-			                             "ts                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"},
+			                             "cts                TIMESTAMP DEFAULT CURRENT_TIMESTAMP);" +
+			                             
+			                             // Meta record (assumes the Meta table was created by 'SMSAppModulePostgreSQLAdapter.java')
+			                             "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Consumers', '"+modelVersionForMetaTable+"')"},
+			                             
+		    {queueTableName, "CREATE TABLE "+queueTableName+"(" +
+		                     "eventId    SERIAL        NOT NULL, " +
+		                     "methodId   TEXT          NOT NULL REFERENCES "+queueTableName+"Consumers(methodId), " +
+		                     fieldsCreationLine +
+		                     "cts        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP);" +
+		                     
+		                     // custom indexes
+		                     "ALTER TABLE "+queueTableName+" ADD PRIMARY KEY (methodid, eventid);" +
+		                     
+		                     // Meta record
+		                     "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"', '"+modelVersionForMetaTable+"')"},
+		                     
  			{queueTableName+"Fallback", "CREATE TABLE "+queueTableName+"Fallback(" +
 			                            "eventId   INT       NOT NULL, " +
-			                            "ts        TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"},
+			                            "cts       TIMESTAMP DEFAULT CURRENT_TIMESTAMP);" +
+					                     
+					                     // Meta record
+					                     "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Fallback', '"+modelVersionForMetaTable+"')"},
 			};
 
+	}
+	
+	/* for testing purposes */
+	public void resetQueues() throws SQLException {
+		PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("ResetTables");
+		invokeUpdateProcedure(procedure);
 	}
 	
 	
 	// public methods
 	/////////////////
 	
-	/** Gets a JDBCAdapter instance to manage PostgreSQL queues. This method must be synchronized because of the way 'queueTableName' is passed along */
-	public synchronized static JDBCAdapter getQueuesDBAdapter(Class<?> eventsEnumeration, String queueTableName, String fieldsCreationLine,
-	                                                          String queueElementFieldList,
-	                                                          String valuesExpressionForInsertNewQueueElementQuery) throws SQLException {
-		QueuesPostgreSQLAdapter.queueTableName     = queueTableName;
-		QueuesPostgreSQLAdapter.fieldsCreationLine = fieldsCreationLine;
-		PostgreSQLAdapter dba = new QueuesPostgreSQLAdapter(log, new String[][] {
+	/** Gets a JDBCAdapter instance to manage PostgreSQL queues. This method must be synchronized because of the way 'queueTableName'
+	  * and 'fieldsCreationLine' are passed along */
+	public synchronized static QueuesPostgreSQLAdapter getQueuesDBAdapter(Class<?> eventsEnumeration, String queueTableName, String fieldsCreationLine,
+	                                                                      String queueElementFieldList,
+	                                                                      String valuesExpressionForInsertNewQueueElementQuery) throws SQLException {
+		staticQueueTableName     = queueTableName;
+		staticFieldsCreationLine = fieldsCreationLine;
+		QueuesPostgreSQLAdapter dba = new QueuesPostgreSQLAdapter(log, new String[][] {
 			{"ResetTables",               "DELETE FROM "+queueTableName+";" +
 			                              "DELETE FROM "+queueTableName+"Fallback;" +
 			                              "UPDATE "+queueTableName+"Consumers SET lastFetchedEventId=-1;"},
@@ -103,12 +153,10 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 //			{"FetchQueueElementById",     "SELECT "+fieldListForFetchQueueElementById+" FROM "+queueTableName+" WHERE eventId=${EVENT_ID}"},
 			// a better query is SELECT MOSMSes.methodId, carrier, phone, text, eventId FROM MOSMSes, MOSMSesConsumers WHERE MOSMSes.methodId=MOSMSesConsumers.methodId AND MOSMSes.eventId > MOSMSesConsumers.lastFetchedEventId ORDER BY eventId ASC;
 			{"FetchNextQueueElements",    "SELECT "+queueElementFieldList+", eventId FROM "+queueTableName+" WHERE methodId=${METHOD_ID} AND eventId > (" +
-			                                  "SELECT lastFetchedEventId FROM "+queueTableName+"Consumers WHERE methodId=${METHOD_ID}) LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
+			                                  "SELECT lastFetchedEventId FROM "+queueTableName+"Consumers WHERE methodId=${METHOD_ID}) ORDER BY eventId ASC LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
 			{"InsertIntoFallbackQueue",   "INSERT INTO "+queueTableName+"Fallback(eventId) VALUES(${EVENT_ID})"},
 			{"InsertMethodId",            "INSERT INTO "+queueTableName+"Consumers(methodId, lastFetchedEventId) VALUES (${METHOD_ID}, -1)"},
 		});
-		QueuesPostgreSQLAdapter.queueTableName     = null;
-		QueuesPostgreSQLAdapter.fieldsCreationLine = null;
 		
 		// assure we have all the necessary 'methodId' entries on 'PostgreSQLQueueEventLinkConsumers'
 		Object[] methodIds = eventsEnumeration.getEnumConstants();

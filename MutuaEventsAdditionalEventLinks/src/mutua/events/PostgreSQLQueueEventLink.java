@@ -1,16 +1,16 @@
 package mutua.events;
 
+import static mutua.events.postgresql.QueuesPostgreSQLAdapter.log;
+import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationEvents.*;
+import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.IP_QUEUE_TABLE_NAME;
+
 import java.sql.SQLException;
+import java.util.Hashtable;
 
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
-import static mutua.events.postgresql.QueuesPostgreSQLAdapter.log;
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.imi.IndirectMethodInvocationInfo;
-import adapters.JDBCAdapter;
 import adapters.dto.PreparedProcedureInvocationDto;
-import adapters.exceptions.PreparedProcedureException;
-import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationEvents.*;
-import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.*;
 
 /** <pre>
  * PostgreSQLQueueEventLink.java
@@ -47,11 +47,12 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	class ConsumerDispatcher extends Thread {
 		
 		private Class<?> eventsEnumeration;
-		private JDBCAdapter dba;
+		private QueuesPostgreSQLAdapter dba;
 		public boolean stop = false;
 		public boolean processing = true;
+		public int notificationCount = 0;	// for the internal notification mechanism, when 'QUEUE_POOLING_TIME' is 0
 		
-		public ConsumerDispatcher(Class<?> eventsEnumeration, JDBCAdapter dba) {
+		public ConsumerDispatcher(Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
 			this.eventsEnumeration = eventsEnumeration;
 			this.dba = dba;
 			setName("PostgreSQLQueueEventLink ConsumerDispatcher thread");
@@ -80,6 +81,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 					if (eventId > lastFetchedEventId) {
 						fetched = true;
 						lastFetchedEventId = eventId;
+						notificationCount -= rowsOfQueueEntries.length;
 						PreparedProcedureInvocationDto updateLastFetchedEventIdProcedure = new PreparedProcedureInvocationDto("UpdateLastFetchedEventId");
 						updateLastFetchedEventIdProcedure.addParameter("LAST_FETCHED_EVENT_ID", lastFetchedEventId);
 						updateLastFetchedEventIdProcedure.addParameter("METHOD_ID", serializedMethodId);
@@ -91,13 +93,19 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 				
 				// wait for a new element or proceed right away?
 				if (!fetched) {
-					log.reportDebug("No new element by now on queue '"+queueTableName+"'");
 					synchronized (this) {
-						processing = false;
-						try {
-							wait(QUEUE_POOLING_TIME);
-						} catch (InterruptedException e) {}
-						processing = true;
+						// use the internal notification mechanism to detect notifications even before we were waiting on them
+						if ((QUEUE_POOLING_TIME == 0) && (notificationCount > 0)) {
+							continue;
+						} else {
+							log.reportDebug("No new element by now on queue '"+queueTableName+"'");
+							processing = false;
+							try {
+								notificationCount = 0;
+								wait(QUEUE_POOLING_TIME);
+							} catch (InterruptedException e) {}
+							processing = true;
+						}
 					}
 				}
 					
@@ -107,7 +115,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	}
 	
 	
-	private   final JDBCAdapter dba;
+	private   final QueuesPostgreSQLAdapter dba;
 	private   final QueueEventLink<SERVICE_EVENTS_ENUMERATION> localEventDispatchingQueue;
 	protected final String queueTableName;
 	private   final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau;
@@ -149,6 +157,9 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			dba.invokeUpdateProcedure(procedure);
 			// notify the consumers dispatch manager
 			synchronized (cdThread) {
+				// inform the internal notification mechanism
+				cdThread.notificationCount++;
+System.err.println("+"+cdThread.notificationCount);
 				cdThread.notify();
 			}
 		} catch (Throwable t) {
@@ -156,10 +167,18 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		}
 	}
 	
+	public boolean hasPendingEvents() {
+System.err.println("="+cdThread.notificationCount);
+		return cdThread.processing || ((QUEUE_POOLING_TIME == 0) && (cdThread.notificationCount > 0));
+	}
+	
 	public void stop() {
 		log.reportEvent(IE_INTERRUPTING, IP_QUEUE_TABLE_NAME, queueTableName);
-		cdThread.stop  = true;
-		for (int i=0; (i<10) && (cdThread.processing); i++) {
+		synchronized (cdThread) {
+			cdThread.stop  = true;
+			cdThread.notify();
+		}
+		for (int i=0; (i<10) && cdThread.processing; i++) {
 			log.reportEvent(IE_WAITING_CONSUMERS);
 			try {Thread.sleep(1000);} catch (InterruptedException e) {}
 		}
@@ -168,6 +187,11 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		}
 		cdThread.interrupt();
 		log.reportEvent(IE_INTERRUPTION_COMPLETE, IP_QUEUE_TABLE_NAME, queueTableName);
+	}
+	
+	/** for testing purposes only */
+	public void resetQueues() throws SQLException {
+		dba.resetQueues();
 	}
 	
 }
