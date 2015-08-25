@@ -51,8 +51,8 @@ public class PostgreSQLQueueEventLinkTests {
 	}
 
 	@Test
-	public void testDyingConsumers() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		log.reportRequestStart("testDyingConsumers");
+	public void testDyingConsumersAndFallbackQueue() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
+		log.reportRequestStart("testDyingConsumersAndFallbackQueue");
 		String expectedMOPhone = "21991234899";
 		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
 		final String[] observedMOPhone = {""};
@@ -64,10 +64,9 @@ public class PostgreSQLQueueEventLinkTests {
 		PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS = 1;
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "DyingQueue", new GenericQueueDataBureau());
-		TestEventServer eventServer = new TestEventServer(link);
-		
 		link.resetQueues();
-		
+		TestEventServer eventServer = new TestEventServer(link);
+				
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
 			public void receiveMOFromQueue(MO mo) {
@@ -80,6 +79,8 @@ public class PostgreSQLQueueEventLinkTests {
 			}
 		});
 		
+		assertEquals("No fallback elements should be present before the first failure", 0, link.popFallbackEventIds().length);
+
 		// add the first event -- this one must raise an exception to see if the worker thread will die
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 		
@@ -87,13 +88,18 @@ public class PostgreSQLQueueEventLinkTests {
 		Thread.sleep(100);
 		
 		assertFalse("First event was not consumed", firstRun[0]);
+		assertEquals("A fallback element should be present after a processing failure", 1, link.popFallbackEventIds().length);
+		
 		
 		// add the second event -- this one must be consumed if the worker didn't die because of the exception
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 		
+		Thread.sleep(100);		
 		log.reportRequestFinish();
 		link.stop();
-		
+
+		assertEquals("No fallback elements should be present, since no other failure hapenned", 0, link.popFallbackEventIds().length);
+
 		assertEquals("Wrong 'phone' dequeued", expectedMOPhone, observedMOPhone[0]);
 		assertEquals("Wrong 'text'  dequeued", expectedMOText,  observedMOText[0]);
 		
@@ -110,21 +116,23 @@ public class PostgreSQLQueueEventLinkTests {
 		final String[] observedMOText  = {""};
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "GenericQueue", new GenericQueueDataBureau());
-		TestEventServer eventServer = new TestEventServer(link);
-
 		link.resetQueues();
+		TestEventServer eventServer = new TestEventServer(link);
 		
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
 			public void receiveMOFromQueue(MO mo) {
+				assertTrue("Attempting to reconsume event", "".equals(observedMOPhone[0]));
+				assertTrue("Attempting to reconsume event", "".equals(observedMOText[0]));
 				observedMOPhone[0] = mo.phone;
 				observedMOText[0]  = mo.text;
 			}
 		});
 		
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
-		log.reportRequestFinish();
-		
+
+		Thread.sleep(100);		
+		log.reportRequestFinish();		
 		link.stop();
 		
 		assertEquals("Wrong 'phone' dequeued", expectedMOPhone, observedMOPhone[0]);
@@ -136,9 +144,9 @@ public class PostgreSQLQueueEventLinkTests {
 		log.reportRequestStart("testAddSeveralItemsAndConsumeAllAtOnce");		
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
+		link.resetQueues();
 		final TestEventServer eventServer = new TestEventServer(link);
 		
-		link.resetQueues();
 
 		final long phoneStart = 21991234800L;
 		final Hashtable<String, String> receivedMOs = new Hashtable<String, String>();
@@ -154,7 +162,7 @@ public class PostgreSQLQueueEventLinkTests {
 					observedNumberOfEntries[0]++;
 				}
 				if (receivedMOs.containsKey(mo.phone)) {
-					fail("Double insertion attempt for phone '"+mo.phone+"'");
+					fail("Double consumption attempt for phone '"+mo.phone+"'");
 				}
 				receivedMOs.put(mo.phone, mo.text);
 				if (firstAndLastConsumedEntriesTimeMillis[0] == -1) {
@@ -171,8 +179,15 @@ public class PostgreSQLQueueEventLinkTests {
 		}
 		
 		// wait for the pending events to be dispatched
+		int attempts = 10;
 		while (link.hasPendingEvents()) {
-			Thread.sleep(10);
+			Thread.sleep(1000/attempts);
+			attempts--;
+			if (attempts == 0) {
+				fail("pending events never got processed");
+//				System.err.println("pending events never got processed");
+//				break;
+			}
 		}
 
 		log.reportRequestFinish();
@@ -233,7 +248,8 @@ class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices
 			serializedParameters.append(',');
 		}
 		serializedParameters.append('}');
-		//preparedProcedure.addParameter("METHOD_ID",  serializedMethodId);		(already inserted)
+		String serializedMethodId = entry.getMethodId().toString();
+		preparedProcedure.addParameter("METHOD_ID",  serializedMethodId);
 		preparedProcedure.addParameter("PARAMETERS", serializedParameters.toString());
 	}
 	@Override

@@ -95,22 +95,19 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		}
 		
 		return new String[][] {
-			{queueTableName+"Consumers", "CREATE TABLE "+queueTableName+"Consumers(" +
-			                             "methodId           TEXT          PRIMARY KEY, " +
-			                             "lastFetchedEventId INT           NOT NULL, " +
-			                             "cts                TIMESTAMP DEFAULT CURRENT_TIMESTAMP);" +
+			{queueTableName+"Head", "CREATE TABLE "+queueTableName+"Head(" +
+			                        "lastFetchedEventId INT           NOT NULL);" +
 			                             
-			                             // Meta record (assumes the Meta table was created by 'SMSAppModulePostgreSQLAdapter.java')
-			                             "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Consumers', '"+modelVersionForMetaTable+"')"},
+			                        // Meta record (assumes the Meta table was created by 'SMSAppModulePostgreSQLAdapter.java')
+			                        "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Head', '"+modelVersionForMetaTable+"')",
+
+			                        // Default record
+			                        "INSERT INTO "+queueTableName+"Head(lastFetchedEventId) VALUES(-1);"},
 			                             
 		    {queueTableName, "CREATE TABLE "+queueTableName+"(" +
-		                     "eventId    SERIAL        NOT NULL, " +
-		                     "methodId   TEXT          NOT NULL REFERENCES "+queueTableName+"Consumers(methodId), " +
+		                     "eventId    SERIAL        PRIMARY KEY, " +
 		                     fieldsCreationLine +
 		                     "cts        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP);" +
-		                     
-		                     // custom indexes
-		                     "ALTER TABLE "+queueTableName+" ADD PRIMARY KEY (methodid, eventid);" +
 		                     
 		                     // Meta record
 		                     "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"', '"+modelVersionForMetaTable+"')"},
@@ -119,8 +116,8 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 			                            "eventId   INT       NOT NULL, " +
 			                            "cts       TIMESTAMP DEFAULT CURRENT_TIMESTAMP);" +
 					                     
-					                     // Meta record
-					                     "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Fallback', '"+modelVersionForMetaTable+"')"},
+					                    // Meta record
+					                    "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Fallback', '"+modelVersionForMetaTable+"')"},
 			};
 
 	}
@@ -131,6 +128,17 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		invokeUpdateProcedure(procedure);
 	}
 	
+	/** receives a 'valuesList' like "${PHONE}, ${TEXT}", a 'fieldsList' like "phone, text", a 'comparator' like "=" and
+	 *  a 'logicOperator' like "AND" and return a text like "phone=${PHONE} AND text=${TEXT}"*/
+	private static String getWhereConditions(String valuesList, String fieldsList, String comparator, String logicOperator) {
+		String[] values = valuesList.split(", *");
+		String[] fields = fieldsList.split(", *");
+		String whereConditions = "";
+		for (int i=0; i<fields.length; i++) {
+			whereConditions = fields[i] + comparator + values[i] + (i < (fields.length-1) ? logicOperator : "");
+		}
+		return whereConditions;
+	}
 	
 	// public methods
 	/////////////////
@@ -145,27 +153,13 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		QueuesPostgreSQLAdapter dba = new QueuesPostgreSQLAdapter(log, new String[][] {
 			{"ResetTables",               "DELETE FROM "+queueTableName+";" +
 			                              "DELETE FROM "+queueTableName+"Fallback;" +
-			                              "UPDATE "+queueTableName+"Consumers SET lastFetchedEventId=-1;"},
+			                              "UPDATE "+queueTableName+"Head SET lastFetchedEventId=-1;"},
 			{"InsertNewQueueElement",     "INSERT INTO "+queueTableName+"("+queueElementFieldList+") VALUES("+valuesExpressionForInsertNewQueueElementQuery+")"},
-			{"UpdateLastFetchedEventId",  "UPDATE "+queueTableName+"Consumers SET lastFetchedEventId=${LAST_FETCHED_EVENT_ID} WHERE methodId=${METHOD_ID}"},
-//			{"FetchNextQueueElementIds",  "SELECT eventId FROM "+queueTableName+" WHERE methodId=${METHOD_ID} AND eventId > (" +
-//			                                  "SELECT lastFetchedEventId FROM "+queueTableName+"Consumers WHERE methodId=${METHOD_ID}) LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
-//			{"FetchQueueElementById",     "SELECT "+fieldListForFetchQueueElementById+" FROM "+queueTableName+" WHERE eventId=${EVENT_ID}"},
-			// a better query is SELECT MOSMSes.methodId, carrier, phone, text, eventId FROM MOSMSes, MOSMSesConsumers WHERE MOSMSes.methodId=MOSMSesConsumers.methodId AND MOSMSes.eventId > MOSMSesConsumers.lastFetchedEventId ORDER BY eventId ASC;
-			{"FetchNextQueueElements",    "SELECT "+queueElementFieldList+", eventId FROM "+queueTableName+" WHERE methodId=${METHOD_ID} AND eventId > (" +
-			                                  "SELECT lastFetchedEventId FROM "+queueTableName+"Consumers WHERE methodId=${METHOD_ID}) ORDER BY eventId ASC LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
-			{"InsertIntoFallbackQueue",   "INSERT INTO "+queueTableName+"Fallback(eventId) VALUES(${EVENT_ID})"},
-			{"InsertMethodId",            "INSERT INTO "+queueTableName+"Consumers(methodId, lastFetchedEventId) VALUES (${METHOD_ID}, -1)"},
+			{"UpdateLastFetchedEventId",  "UPDATE "+queueTableName+"Head SET lastFetchedEventId=${LAST_FETCHED_EVENT_ID}"},
+			{"FetchNextQueueElements",    "SELECT "+queueElementFieldList+", eventId FROM "+queueTableName+" WHERE eventId > (SELECT lastFetchedEventId FROM "+queueTableName+"Head) ORDER BY eventId ASC LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
+			{"InsertIntoFallbackQueue",   "INSERT INTO "+queueTableName+"Fallback(eventId) SELECT eventId FROM "+queueTableName+" WHERE "+getWhereConditions(valuesExpressionForInsertNewQueueElementQuery, queueElementFieldList, "=", "AND")+" ORDER BY eventId DESC"},
+			{"PopFallbackElements",       "DELETE FROM "+queueTableName+"Fallback RETURNING eventId"},
 		});
-		
-		// assure we have all the necessary 'methodId' entries on 'PostgreSQLQueueEventLinkConsumers'
-		Object[] methodIds = eventsEnumeration.getEnumConstants();
-		for (int i=0; i<methodIds.length; i++) try {
-			String methodId = ((Enum<?>)methodIds[i]).name();
-			PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("InsertMethodId");
-			procedure.addParameter("METHOD_ID", methodId);
-			dba.invokeUpdateProcedure(procedure);
-		} catch (Throwable t) {}
 		
 		return dba;
 

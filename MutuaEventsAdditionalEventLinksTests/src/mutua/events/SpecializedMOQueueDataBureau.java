@@ -21,31 +21,28 @@ class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventSe
 	@Override
 	public void serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException {
 		MO mo = (MO)entry.getParameters()[0];
-		preparedProcedure.addParameter("CARRIER", "testCarrier");
-		preparedProcedure.addParameter("PHONE",   mo.phone);
-		preparedProcedure.addParameter("TEXT",    mo.text);
+		preparedProcedure.addParameter("PHONE",     mo.phone);
+		preparedProcedure.addParameter("TEXT",      mo.text);
 	}
 	@Override
 	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
-		String carrier = (String)databaseRow[1];
-		String phone   = (String)databaseRow[2];
-		String text    = (String)databaseRow[3];
+		String phone   = (String)databaseRow[0];
+		String text    = (String)databaseRow[1];
 		MO mo = new MO(phone, text);
 		IndirectMethodInvocationInfo<ETestEventServices> entry = new IndirectMethodInvocationInfo<ETestEventServices>(ETestEventServices.MO_ARRIVED, mo);
 		return entry;
 	}
 	@Override
 	public String getValuesExpressionForInsertNewQueueElementQuery() {
-		return "${METHOD_ID}, ${CARRIER}, ${PHONE}, ${TEXT}";
+		return "${PHONE}, ${TEXT}";
 	}
 	@Override
 	public String getQueueElementFieldList() {
-		return "methodId, carrier, phone, text";
+		return "phone, text";
 	}
 	@Override
 	public String getFieldsCreationLine() {
-		return 	"carrier   TEXT NOT NULL, " +
-                "phone     TEXT NOT NULL, " +
-				"text      TEXT NOT NULL, ";
+		return "phone     TEXT NOT NULL, " +
+		       "text      TEXT NOT NULL, ";
 	}
 }

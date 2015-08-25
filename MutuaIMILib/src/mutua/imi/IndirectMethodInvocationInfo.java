@@ -1,5 +1,7 @@
 package mutua.imi;
 
+import java.util.Arrays;
+
 /** <pre>
  * IndirectMethodInvocationInfo.java
  * =================================
@@ -28,5 +30,10 @@ public class IndirectMethodInvocationInfo<METHOD_ID_TYPE> {
 	
 	public Object[] getParameters() {
 		return parameters;
+	}
+	
+	@Override
+	public String toString() {
+		return methodId.toString()+Arrays.toString(parameters);
 	}
 }

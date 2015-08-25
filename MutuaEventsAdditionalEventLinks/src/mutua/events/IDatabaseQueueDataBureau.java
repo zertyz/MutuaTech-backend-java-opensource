@@ -36,8 +36,8 @@ public abstract class IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> {
 
 	/** returns the fields creation line for the queue table -- all fields should end with a comma */
 	public String getFieldsCreationLine() {
-		return 	//"methodId   VARCHAR(15)   NOT NULL, " +	(methodId is included by default)
-                "parameters VARCHAR(1024) NOT NULL, ";
+		return 	"methodId   TEXT NOT NULL, " +
+                "parameters TEXT NOT NULL, ";
 	}
 	
 }
