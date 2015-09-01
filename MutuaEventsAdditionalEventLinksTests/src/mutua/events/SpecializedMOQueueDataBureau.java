@@ -21,8 +21,8 @@ class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventSe
 	@Override
 	public void serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException {
 		MO mo = (MO)entry.getParameters()[0];
-		preparedProcedure.addParameter("PHONE",     mo.phone);
-		preparedProcedure.addParameter("TEXT",      mo.text);
+		preparedProcedure.addParameter("PHONE", mo.phone);
+		preparedProcedure.addParameter("TEXT",  mo.text);
 	}
 	@Override
 	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
@@ -42,7 +42,7 @@ class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventSe
 	}
 	@Override
 	public String getFieldsCreationLine() {
-		return "phone     TEXT NOT NULL, " +
-		       "text      TEXT NOT NULL, ";
+		return "phone  TEXT NOT NULL, " +
+		       "text   TEXT NOT NULL, ";
 	}
 }

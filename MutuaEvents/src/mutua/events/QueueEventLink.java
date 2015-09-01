@@ -34,7 +34,6 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 		@Override
 		public void run() {
 			IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = null;
-			System.out.println("QueueEventLink: A consumer started");
 			while (true) try {
 				event = null;
 				try {
@@ -57,28 +56,24 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 						synchronized (clientsAndConsumerMethodInvokers) {
 							System.out.println("QueueEventLink ConsumerWorker: no consumer methods registered yet. Waiting...");
 							clientsAndConsumerMethodInvokers.wait();
-							System.out.println("QueueEventLink ConsumerWorker: Waking up, since we got a notification that at least a consumer is now available!");
+							System.out.println("QueueEventLink ConsumerWorker: Waking up, since we got a notification that at least one consumer method is now available!");
 						}
 					} while (true);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			} catch (Throwable t) {
-				System.out.println("QueueEventLink: A consumer worker method generated an uncouth exception");
-				t.printStackTrace();
 				// report that the element was not processed
 				if (event != null) {
 					queueEventLink.pushFallback(event, t);
 				}
 			}
-			//System.out.println("QueueEventLink: A consumer dyed");
 		}
 	}
 
 	class ListenerWorker extends Thread {
 		@Override
 		public void run() {
-			System.out.println("A listener started");
 			while (true) {
 				try {
 					IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = listenableEventsQueue.take();
@@ -120,6 +115,8 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 
 	/** Method called for events that could not be processed (threw an exception). Override to make it actually do something -- i.e., add to a fallback list */
 	public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
+		System.out.println("QueueEventLink: A consumer method generated an uncouth exception");
+		t.printStackTrace();
 	}
 
 	@Override
