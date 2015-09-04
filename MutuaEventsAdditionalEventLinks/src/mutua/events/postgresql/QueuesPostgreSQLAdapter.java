@@ -96,7 +96,7 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		
 		return new String[][] {
 			{queueTableName+"Head", "CREATE TABLE "+queueTableName+"Head(" +
-			                        "lastFetchedEventId INT           NOT NULL);" +
+			                        "lastFetchedEventId  INT  NOT NULL);" +
 			                             
 			                        // Meta record (assumes the Meta table was created by 'SMSAppModulePostgreSQLAdapter.java')
 			                        "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Head', '"+modelVersionForMetaTable+"')",
@@ -107,14 +107,14 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		    {queueTableName, "CREATE TABLE "+queueTableName+"(" +
 		                     "eventId    SERIAL        PRIMARY KEY, " +
 		                     fieldsCreationLine +
-		                     "cts        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP);" +
+		                     "cts        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP);" +
 		                     
 		                     // Meta record
 		                     "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"', '"+modelVersionForMetaTable+"')"},
 		                     
  			{queueTableName+"Fallback", "CREATE TABLE "+queueTableName+"Fallback(" +
-			                            "eventId   INT       NOT NULL, " +
-			                            "cts       TIMESTAMP DEFAULT CURRENT_TIMESTAMP);" +
+			                            "eventId   INT        NOT NULL, " +
+			                            "cts       TIMESTAMP  DEFAULT   CURRENT_TIMESTAMP);" +
 					                     
 					                    // Meta record
 					                    "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Fallback', '"+modelVersionForMetaTable+"')"},

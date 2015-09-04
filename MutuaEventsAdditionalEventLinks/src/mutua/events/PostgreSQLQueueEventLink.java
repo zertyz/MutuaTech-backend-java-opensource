@@ -106,8 +106,8 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 				if (!fetched) {
 					synchronized (this) {
 						// use the internal notification mechanism to detect notifications even before we were waiting on them
-						if ((QUEUE_POOLING_TIME == 0) && (notificationCount > 0)) {
-							// wait(10000);		// prevents any possible loops
+						if (notificationCount != 0) {
+							notificationCount -= Math.min(notificationCount, 1);	// prevents possible loops
 							continue;
 						} else {
 							log.reportDebug("No new element by now on queue '"+queueTableName+"'");
