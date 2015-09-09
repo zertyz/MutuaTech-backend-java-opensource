@@ -154,7 +154,7 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 			{"ResetTables",               "DELETE FROM "+queueTableName+";" +
 			                              "DELETE FROM "+queueTableName+"Fallback;" +
 			                              "UPDATE "+queueTableName+"Head SET lastFetchedEventId=-1;"},
-			{"InsertNewQueueElement",     "INSERT INTO "+queueTableName+"("+queueElementFieldList+") VALUES("+valuesExpressionForInsertNewQueueElementQuery+")"},
+			{"InsertNewQueueElement",     "INSERT INTO "+queueTableName+"("+queueElementFieldList+") VALUES("+valuesExpressionForInsertNewQueueElementQuery+") RETURNING eventId"},
 			{"UpdateLastFetchedEventId",  "UPDATE "+queueTableName+"Head SET lastFetchedEventId=${LAST_FETCHED_EVENT_ID}"},
 			{"FetchNextQueueElements",    "SELECT "+queueElementFieldList+", eventId FROM "+queueTableName+" WHERE eventId > (SELECT lastFetchedEventId FROM "+queueTableName+"Head) ORDER BY eventId ASC LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
 			{"InsertIntoFallbackQueue",   "INSERT INTO "+queueTableName+"Fallback(eventId) SELECT eventId FROM "+queueTableName+" WHERE "+getWhereConditions(valuesExpressionForInsertNewQueueElementQuery, queueElementFieldList, "=", "AND")+" ORDER BY eventId DESC"},

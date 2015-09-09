@@ -23,23 +23,25 @@ public class DirectEventLink<SERVICE_EVENTS_ENUMERATION> extends IEventLink<SERV
 	}
 
 	@Override
-	public void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+	public int reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndListenerMethodInvokers.keySet()) try {
 			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> imi = clientsAndListenerMethodInvokers.get(client);
 			imi.invokeMethod(event);
 		} catch (IndirectMethodNotFoundException e) {
 			// nothing to do -- there is no problema if no one is listening
 		}
+		return -1;
 	}
 
 	@Override
-	public void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+	public int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndConsumerMethodInvokers.keySet()) try {
 			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> imi = clientsAndConsumerMethodInvokers.get(client);
 			imi.invokeMethod(event);
 		} catch (IndirectMethodNotFoundException e) {
 			//e.printStackTrace();
 		}
+		return -1;
 	}
 
 }

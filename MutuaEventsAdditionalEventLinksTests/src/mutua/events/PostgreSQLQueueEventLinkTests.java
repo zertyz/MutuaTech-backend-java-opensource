@@ -13,7 +13,6 @@ import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
-import mutua.smsappmodule.SplitRun;
 
 import org.junit.Test;
 
@@ -207,36 +206,6 @@ public class PostgreSQLQueueEventLinkTests {
 	}
 
 }
-
-class MO {
-	public final String phone;
-	public final String text;
-	public MO(String phone, String text) {
-		this.phone = phone;
-		this.text  = text;
-	}
-	@Override
-	public String toString() {
-		return "phone='"+phone+"', text='"+text+"'";
-	}
-}
-
-
-class TestEventServer extends EventServer<ETestEventServices> {
-	
-	public enum ETestEventServices {
-		MO_ARRIVED,
-	}
-	
-	public TestEventServer(IEventLink<ETestEventServices> link) {
-		super(link);
-	}
-	
-	public void addToMOQueue(MO mo) {
-		dispatchConsumableEvent(ETestEventServices.MO_ARRIVED, mo);
-	}	
-}
-
 
 class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
 	@Override

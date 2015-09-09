@@ -60,11 +60,13 @@ public abstract class IEventLink<SERVICE_EVENTS_ENUMERATION> {
 		}
 	}
 	
-	/** Takes actions to notify all client's appropriate 'Listener' methods that an event happened */
-	public abstract void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
+	/** Takes actions to notify all client's appropriate 'Listener' methods that an event happened.
+	 *  Returns the 'eventId' or -1, if not applicable */
+	public abstract int reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
 	
-	/** Takes actions to notify the appropriate 'Consumer' method of one of the client's that an event happened */
-	public abstract void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
+	/** Takes actions to notify the appropriate 'Consumer' method of one of the client's that an event happened,
+	 *  returning the 'eventId' (or -1 if not applicable) */
+	public abstract int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
 	
 	/** Returns true if, for sure, events for the specified 'serviceId' cannot be consumed by any consumer */
 	public boolean areEventsNotConsumable(Object serviceId) {

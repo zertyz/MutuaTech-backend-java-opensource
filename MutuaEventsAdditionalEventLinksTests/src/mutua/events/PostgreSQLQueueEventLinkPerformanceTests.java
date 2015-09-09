@@ -7,7 +7,6 @@ import java.util.Hashtable;
 
 import mutua.events.TestEventServer.ETestEventServices;
 import mutua.events.annotations.EventConsumer;
-import mutua.imi.IndirectMethodNotFoundException;
 import mutua.smsappmodule.DatabaseAlgorithmAnalysis;
 import mutua.smsappmodule.config.SMSAppModuleConfigurationTests;
 

@@ -17,7 +17,7 @@ import adapters.exceptions.PreparedProcedureException;
  * @author luiz
 */
 
-class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
+public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
 	@Override
 	public void serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException {
 		MO mo = (MO)entry.getParameters()[0];

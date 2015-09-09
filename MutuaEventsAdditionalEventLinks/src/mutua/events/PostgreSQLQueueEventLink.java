@@ -166,17 +166,17 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	}
 
 	@Override
-	public void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+	public int reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		throw new RuntimeException("Listenable Events not available for now, for database queue event link");
 	}
 
 	@Override
-	public void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+	public int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		try {
 			// insert into the queue
 			PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("InsertNewQueueElement");
 			dataBureau.serializeQueueEntry(event, procedure);
-			dba.invokeUpdateProcedure(procedure);
+			int eventId = (Integer) dba.invokeScalarProcedure(procedure);
 			// notify the consumers dispatch manager
 			synchronized (cdThread) {
 				// inform the internal notification mechanism
@@ -184,8 +184,12 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 //System.err.println("+"+cdThread.notificationCount);
 				cdThread.notify();
 			}
+			
+			return eventId;
+			
 		} catch (Throwable t) {
 			log.reportThrowable(t, "Error while attempting to insert PostgreSQL queue element");
+			return -1;
 		}
 	}
 	

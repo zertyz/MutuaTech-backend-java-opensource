@@ -120,21 +120,23 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 	}
 
 	@Override
-	public void reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+	public int reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		try {
 			listenableEventsQueue.put(event);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		return -1;
 	}
 
 	@Override
-	public void reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+	public int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		try {
 			consumableEventsQueue.put(event);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		return -1;
 	}
 
 	@Override
