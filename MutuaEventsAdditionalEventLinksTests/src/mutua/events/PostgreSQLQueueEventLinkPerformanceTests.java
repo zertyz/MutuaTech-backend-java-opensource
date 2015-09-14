@@ -37,14 +37,14 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 	
 	@Test
 	public void testAlgorithmAnalysis() throws Throwable {
-		int inserts =  totalNumberOfEntries / 2;
-		int selects = inserts;
+		final int inserts =  totalNumberOfEntries / 2;
+		final int selects = inserts;
 		
 		final PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
 		final TestEventServer eventServer = new TestEventServer(link);
 		final boolean[]                 wasClientAdded          = {false};
 		final int[]                     observedNumberOfEntries = {0};
-		final Hashtable<String, String> receivedMOs             = new Hashtable<String, String>();
+		final Hashtable<String, String> receivedMOs             = new Hashtable<String, String>(totalNumberOfEntries+1, 1.0f);
 		
 		// prepare the tables & variables
 		final MO[] mos   = new MO[inserts*2];
@@ -76,9 +76,9 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 				eventServer.addToMOQueue(mos[i]);
 			}
 			public void selectLoopCode(int i) throws Throwable {
-				if ((i == 0) || (i == (totalNumberOfEntries / 2))) {
+				if ((i == 0) || (i == inserts)) {
 					eventServer.addClient(eventClient);
-				} else if ((i == ((totalNumberOfEntries / 2)-1))) {
+				} else if ((i == (inserts-1))) {
 //System.err.print("Waiting for first pass of selects to finish... ");
 					while (observedNumberOfEntries[0] != (totalNumberOfEntries / 2)) {
 //System.err.println("still waiting... " + observedNumberOfEntries[0] + " != " + (totalNumberOfEntries / 2));

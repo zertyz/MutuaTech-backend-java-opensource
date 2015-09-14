@@ -151,8 +151,8 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		staticQueueTableName     = queueTableName;
 		staticFieldsCreationLine = fieldsCreationLine;
 		QueuesPostgreSQLAdapter dba = new QueuesPostgreSQLAdapter(log, new String[][] {
-			{"ResetTables",               "DELETE FROM "+queueTableName+";" +
-			                              "DELETE FROM "+queueTableName+"Fallback;" +
+			{"ResetTables",               "TRUNCATE "+queueTableName+" CASCADE;" +
+			                              "TRUNCATE "+queueTableName+"Fallback CASCADE;" +
 			                              "UPDATE "+queueTableName+"Head SET lastFetchedEventId=-1;"},
 			{"InsertNewQueueElement",     "INSERT INTO "+queueTableName+"("+queueElementFieldList+") VALUES("+valuesExpressionForInsertNewQueueElementQuery+") RETURNING eventId"},
 			{"UpdateLastFetchedEventId",  "UPDATE "+queueTableName+"Head SET lastFetchedEventId=${LAST_FETCHED_EVENT_ID}"},

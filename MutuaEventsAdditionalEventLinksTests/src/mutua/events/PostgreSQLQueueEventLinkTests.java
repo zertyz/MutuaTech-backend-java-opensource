@@ -39,7 +39,7 @@ public class PostgreSQLQueueEventLinkTests {
 	
 	// configure the database
 	static {
-		JDBCAdapter.CONNECTION_POOL_SIZE = 8;
+		//JDBCAdapter.CONNECTION_POOL_SIZE = 8;
 		JDBCAdapter.SHOULD_DEBUG_QUERIES = false;
 		QueuesPostgreSQLAdapter.log = log; 
 		QueuesPostgreSQLAdapter.HOSTNAME = "venus";
