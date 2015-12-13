@@ -10,7 +10,7 @@ The strategy
 	Each application, framework, platform or whatsoever piece of deliverable software
 	one is producing that needs to use the Configuration framework, should implement an
 	specialized version of the corresponding config.*Configuration class, which should
-	make the necessary adjusts of each class -- for instance, setting constants and the
+	make the necessary adjustments of each class -- for instance, setting constants and the
 	like. Please see the tests project for examples.
 
 The data sources
@@ -26,7 +26,7 @@ The data sources
 	6) HTTPConfigurationDataSource
 	
 	Adding to that, data sources may be static or dynamic -- which should allow some or
-	all configuration to be reloaded base on events -- triggered by timespan or other
+	all configuration to be reloaded based on events -- triggered by timespan or other
 	actions (like a local file change, new database record or P2PServicesAPI event).
 
 Additional features

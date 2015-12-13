@@ -5,8 +5,6 @@ import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import mutua.icc.instrumentation.Instrumentation;
-
 /** <pre>
  * ConfigurationParser.java
  * ========================

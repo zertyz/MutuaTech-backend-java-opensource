@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import mutua.events.PostgreSQLQueueEventLink;
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
-import adapters.JDBCAdapter;
 import adapters.PostgreSQLAdapter;
 import adapters.dto.PreparedProcedureInvocationDto;
 

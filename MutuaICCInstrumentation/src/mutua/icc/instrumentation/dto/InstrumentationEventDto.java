@@ -1,13 +1,8 @@
 package mutua.icc.instrumentation.dto;
 
-import java.text.FieldPosition;
-import java.text.SimpleDateFormat;
 import java.util.Hashtable;
-
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.InstrumentableEvent;
-import mutua.serialization.ISerializationRule;
-import mutua.serialization.SerializationRepository;
 
 /** <pre>
  * EventDto.java

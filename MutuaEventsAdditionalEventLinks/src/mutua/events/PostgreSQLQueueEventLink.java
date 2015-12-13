@@ -2,17 +2,15 @@ package mutua.events;
 
 import static mutua.events.postgresql.QueuesPostgreSQLAdapter.log;
 import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationEvents.*;
-import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.IP_QUEUE_TABLE_NAME;
+import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.*;
 
 import java.sql.SQLException;
-import java.util.HashMap;
 
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
 import adapters.dto.PreparedProcedureInvocationDto;
-import adapters.exceptions.PreparedProcedureException;
 
 /** <pre>
  * PostgreSQLQueueEventLink.java

@@ -1,6 +1,5 @@
 package mutua.serialization;
 
-import java.util.ArrayList;
 import java.util.Hashtable;
 
 /** <pre>
@@ -100,7 +99,5 @@ public class SerializationRepository {
 			}
 		}
 	}
-	
-	
 
 }

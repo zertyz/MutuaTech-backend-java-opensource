@@ -9,7 +9,7 @@ import adapters.exceptions.PreparedProcedureException;
  * =============================
  * (created by luiz, Jan 30, 2015)
  *
- * Knows how to serialize & desserialize queue events to and from database queries
+ * Knows how to serialize & deserialize queue events to and from database queries
  *
  * @see RelatedClass(es)
  * @version $Id$
