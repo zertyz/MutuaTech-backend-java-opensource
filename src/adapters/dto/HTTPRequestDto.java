@@ -2,9 +2,6 @@ package adapters.dto;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
-import java.util.Iterator;
-
-import adapters.HTTPClientAdapter;
 
 /** <pre>
  * HTTPRequestDto.java
@@ -108,6 +105,4 @@ public class HTTPRequestDto {
 		return sb.toString();
 	}
 	
-	
-
 }
