@@ -41,12 +41,7 @@ public class PostgreSQLQueueEventLinkTests {
 	static {
 		//JDBCAdapter.CONNECTION_POOL_SIZE = 8;
 		JDBCAdapter.SHOULD_DEBUG_QUERIES = false;
-		QueuesPostgreSQLAdapter.log = log; 
-		QueuesPostgreSQLAdapter.HOSTNAME = "venus";
-		QueuesPostgreSQLAdapter.PORT     = 5432;
-		QueuesPostgreSQLAdapter.DATABASE = "hangman";
-		QueuesPostgreSQLAdapter.USER     = "hangman";
-		QueuesPostgreSQLAdapter.PASSWORD = "hangman";
+		QueuesPostgreSQLAdapter.configureQueuesDatabaseModule(log, "venus", 5432, "hangman", "hangman", "hangman");
 	}
 
 	@Test

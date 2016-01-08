@@ -32,3 +32,9 @@ For more documentation, please refer to 'MutuaGPP2PCommunicationsTests' project.
   need a "Dropbox", although a queue seems to fit perfect for asyncs...
 - Possibly we may consider using the EventAdapter pattern -- ClientAdapter implements stub server
   functions and vice-versa
+  
+Operation
+
+	Some wonderful information can be found at
+	- https://mrotaru.wordpress.com/2013/10/10/scaling-to-12-million-concurrent-connections-how-migratorydata-did-it/
+	- https://mrotaru.wordpress.com/2015/05/20/how-migratorydata-solved-the-c10m-problem-10-million-concurrent-connections-on-a-single-commodity-server/

@@ -3,7 +3,6 @@ package mutua.events.postgresql;
 import java.sql.SQLException;
 
 import mutua.events.PostgreSQLQueueEventLink;
-import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
 import adapters.PostgreSQLAdapter;
 import adapters.dto.PreparedProcedureInvocationDto;
@@ -31,19 +30,32 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	// configuration
 	////////////////
 	
-	@ConfigurableElement("The application's instrumentation instance to be used to log PostgreSQL database events")
+	/** The application's instrumentation instance to be used to log PostgreSQL database events */
 	public static Instrumentation<?, ?> log;
 
-	@ConfigurableElement("Hostname (or IP) of the PostgreSQL server")
-	public static String HOSTNAME;
-	@ConfigurableElement("Connection port for the PostgreSQL server")
-	public static int    PORT;
-	@ConfigurableElement("The PostgreSQL database with the application's data scope")
-	public static String DATABASE;
-	@ConfigurableElement("The PostgreSQL user name to access 'DATABASE' -- note: administrative rights, such as the creation of tables, might be necessary")
-	public static String USER;
-	@ConfigurableElement("The PostgreSQL plain text password for 'USER'")
-	public static String PASSWORD;
+	/** Hostname (or IP) of the PostgreSQL server */
+	private static String hostname;
+	/** Connection port for the PostgreSQL server */
+	private static int port;
+	/** The PostgreSQL database with the application's data scope */
+	private static String database;
+	/** The PostgreSQL user name to access 'DATABASE' -- note: administrative rights, such as the creation of tables, might be necessary */
+	private static String user;
+	/** The PostgreSQL plain text password for 'USER' */
+	private static String password;
+	
+	
+	public static void configureQueuesDatabaseModule(Instrumentation<?, ?> log,
+	                                                 String hostname, int port, String database, String user, String password) {
+
+		QueuesPostgreSQLAdapter.log = log;
+		
+		QueuesPostgreSQLAdapter.hostname = hostname;
+		QueuesPostgreSQLAdapter.port     = port;
+		QueuesPostgreSQLAdapter.database = database;
+		QueuesPostgreSQLAdapter.user     = user;
+		QueuesPostgreSQLAdapter.password = password;
+	}
 	
 	
 	// fields set by the public get instance methods which must be set via the static field,
@@ -59,7 +71,7 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 
 	@Override
 	protected String[] getCredentials() {
-		return new String[] {HOSTNAME, Integer.toString(PORT), DATABASE, USER, PASSWORD};
+		return new String[] {hostname, Integer.toString(port), database, user, password};
 	}
 
 	@Override

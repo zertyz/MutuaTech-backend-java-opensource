@@ -170,6 +170,10 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 
 	@Override
 	public int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
+		
+		// TODO an optimization is possible for a single node (single machine) service: the quele element should be inserted on the database, but also on the ram Queue, if it has enough slots available. In this case, the lastConsumedEvent must be also set after inserting.
+		// TODO PostgreSQL have a LISTEN/NOTIFY command set which might bring some performance improvements -- it can be done with pgjdbc-ng driver http://blog.databasepatterns.com/2014/04/postgresql-nofify-websocket-spring-mvc.html but not with the usual JDBC implementation, since JDBC does not allow asynchronous notifications: https://jdbc.postgresql.org/documentation/80/listennotify.html 
+		
 		try {
 			// insert into the queue
 			PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("InsertNewQueueElement");
