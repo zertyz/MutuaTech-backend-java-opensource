@@ -1,6 +1,7 @@
 package mutua.events.postgresql;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 
 import mutua.events.PostgreSQLQueueEventLink;
 import mutua.icc.instrumentation.Instrumentation;
@@ -75,15 +76,21 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	}
 
 	@Override
-	protected String getDropDatabaseCommand() {
-		String statements = "";		
+	protected String[] getDropDatabaseCommand() {
+		// TODO the Meta table norm may be incorporated into PostgreSQLAdapter
 		String[][] tableDefinitions = getTableDefinitions();
+		String[] superStatements = super.getDropDatabaseCommand();
+		String[] statements = new String[superStatements.length + tableDefinitions.length];
 		
+		int i;
+		for (i=0; i<superStatements.length; i++) {
+			statements[i] = superStatements[i];
+		}
 		for (String[] tableDefinition : tableDefinitions) {
 			String databaseName = tableDefinition[0];
-			statements += "DELETE FROM Meta WHERE tableName='"+databaseName+"';";
+			statements[i++] = "DELETE FROM Meta WHERE tableName='"+databaseName+"';";
 		}
-		return super.getDropDatabaseCommand() + statements;
+		return statements;
 	}
 
 
