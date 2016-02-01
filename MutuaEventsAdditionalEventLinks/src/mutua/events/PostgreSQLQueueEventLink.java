@@ -1,6 +1,5 @@
 package mutua.events;
 
-import static mutua.events.postgresql.QueuesPostgreSQLAdapter.log;
 import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationEvents.*;
 import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.*;
 
@@ -8,9 +7,11 @@ import java.sql.SQLException;
 
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
 import mutua.icc.configuration.annotations.ConfigurableElement;
+import mutua.icc.instrumentation.Instrumentation;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
-import adapters.dto.PreparedProcedureInvocationDto;
+
+import static mutua.events.postgresql.QueuesPostgreSQLAdapter.QueueParameters.*;
 
 /** <pre>
  * PostgreSQLQueueEventLink.java
@@ -28,31 +29,42 @@ import adapters.dto.PreparedProcedureInvocationDto;
 public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEventLink<SERVICE_EVENTS_ENUMERATION> {
 	
 	
-	// configuration
-	////////////////
+	// Mutua Configurable Class pattern
+	///////////////////////////////////
 	
-	@ConfigurableElement("The amount of milliseconds the PostgreSQLQueueEventLink ConsumerDispatcher thread should wait between queries for new " +
-	                     "queue entries to process. Set to 0 to rely on the internal notification mechanisms and only when queue producers and " +
-	                     "consumers are running on the same machine and on the same process.")
+	private static Instrumentation<?, ?> LOG;
+	
+	/** The amount of milliseconds the PostgreSQLQueueEventLink ConsumerDispatcher thread should wait between queries for new " +
+	 *  "queue entries to process. Set to 0 to rely on the internal notification mechanisms and only when queue producers and " +
+	 *  "consumers are running on the same machine and on the same process. */
 	public static long QUEUE_POOLING_TIME = 0;
-	@ConfigurableElement("The number of threads that will consume the queue events")
+	/** The number of threads that will consume the queue events */
 	public static int  QUEUE_NUMBER_OF_WORKER_THREADS = 10;
-
-
-	// TODO (Write only) fallback queue. 'lastProcessedEntry' is update as soon as an element is fetched from the database.
-	//      If the consumer reports an error processing it, the element should go to the fallback queue.
 	
+	/** method to be called when attempting to configure the default behavior for new instances of 'PostgreSQLQueueEventLink'.
+	 *  @param queuePoolingTime if < 0, the default value won't be touched
+	 *  @param queueNumberOfWorkerThreads   if <= 0, the default value won't be touched */
+	public static void configureDefaultValuesForNewInstances(Instrumentation<?, ?> log, long queuePoolingTime, int queueNumberOfWorkerThreads) {		
+			LOG = log;
+			QUEUE_POOLING_TIME             = queuePoolingTime           >= 0 ? queuePoolingTime           : QUEUE_POOLING_TIME;
+			QUEUE_NUMBER_OF_WORKER_THREADS = queueNumberOfWorkerThreads >  0 ? queueNumberOfWorkerThreads : QUEUE_NUMBER_OF_WORKER_THREADS;;
+	}
+
 	
 	/** Designed to be run by a single thread, this class fetches the database and assigns work for instances of 'ConsumerWorker' */
 	class ConsumerDispatcher extends Thread {
 		
-		private Class<?> eventsEnumeration;
-		private QueuesPostgreSQLAdapter dba;
+		private final Instrumentation<?, ?> log;
+		private final long queuePoolingTime;
+		private final Class<?> eventsEnumeration;
+		private final QueuesPostgreSQLAdapter dba;
 		public boolean stop = false;
 		public boolean processing = true;
 		public int notificationCount = 0;	// for the internal notification mechanism, when 'QUEUE_POOLING_TIME' is 0
 		
-		public ConsumerDispatcher(Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
+		public ConsumerDispatcher(Instrumentation<?, ?> log, long queuePoolingTime, Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
+			this.log = log;
+			this.queuePoolingTime = queuePoolingTime;
 			this.eventsEnumeration = eventsEnumeration;
 			this.dba = dba;
 			setName("PostgreSQLQueueEventLink ConsumerDispatcher thread");
@@ -75,8 +87,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 				boolean fetched = false;
 				int eventId = -1;
 				try {
-					PreparedProcedureInvocationDto getEventIdsProcedure = new PreparedProcedureInvocationDto("FetchNextQueueElements");
-					Object[][] rowsOfQueueEntries = dba.invokeArrayProcedure(getEventIdsProcedure);
+					Object[][] rowsOfQueueEntries = dba.invokeArrayProcedure(dba.FetchNextQueueElements);
 					for (Object[] queueEntry : rowsOfQueueEntries) {
 						// queueEntry := { [the fields listed by 'dataBureau.getQueueElementFieldList'], eventId}
 						eventId = (Integer)queueEntry[queueEntry.length-1];
@@ -91,9 +102,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 						}
 						if (eventId > lastFetchedEventId) {
 							lastFetchedEventId = eventId;
-							PreparedProcedureInvocationDto updateLastFetchedEventIdProcedure = new PreparedProcedureInvocationDto("UpdateLastFetchedEventId");
-							updateLastFetchedEventIdProcedure.addParameter("LAST_FETCHED_EVENT_ID", lastFetchedEventId);
-							dba.invokeUpdateProcedure(updateLastFetchedEventIdProcedure);
+							dba.invokeUpdateProcedure(dba.UpdateLastFetchedEventId, LAST_FETCHED_EVENT_ID, lastFetchedEventId);
 						}
 					}
 				} catch (Throwable t) {
@@ -111,7 +120,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 							log.reportDebug("No new element by now on queue '"+queueTableName+"'");
 							processing = false;
 							try {
-								wait(QUEUE_POOLING_TIME);
+								wait(queuePoolingTime);
 							} catch (InterruptedException e) {}
 							processing = true;
 						}
@@ -124,32 +133,35 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	}
 	
 	
-	private   final QueuesPostgreSQLAdapter dba;
-	private   final QueueEventLink<SERVICE_EVENTS_ENUMERATION> localEventDispatchingQueue;
-	protected final String queueTableName;
+	private   final Instrumentation<?, ?>                                log;
+	private   final QueuesPostgreSQLAdapter                              dba;
+	private   final QueueEventLink<SERVICE_EVENTS_ENUMERATION>           localEventDispatchingQueue;
+	protected final String                                               queueTableName;
 	private   final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau;
-	private   final ConsumerDispatcher cdThread;
+	private   final ConsumerDispatcher                                   cdThread;
 	
 
 	public PostgreSQLQueueEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration, final String queueTableName,
 	                                final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau) throws SQLException {
 		super(eventsEnumeration);
+		this.log = LOG;
 		this.queueTableName = queueTableName;
 		this.dataBureau = dataBureau;
 		dba = QueuesPostgreSQLAdapter.getQueuesDBAdapter(eventsEnumeration, queueTableName, dataBureau.getFieldsCreationLine(),
 		                                                 dataBureau.getQueueElementFieldList(),
-		                                                 dataBureau.getValuesExpressionForInsertNewQueueElementQuery());
+		                                                 dataBureau.getParametersListForInsertNewQueueElementQuery(),
+		                                                 QUEUE_NUMBER_OF_WORKER_THREADS);
 		
 		// creates an 'QueueEventLink' that will report events to the listeners and consumers of this instance
 		int localEventDispatchingQueueCapacity = 2*QUEUE_NUMBER_OF_WORKER_THREADS;
 		localEventDispatchingQueue = new QueueEventLink<SERVICE_EVENTS_ENUMERATION>(eventsEnumeration, localEventDispatchingQueueCapacity, QUEUE_NUMBER_OF_WORKER_THREADS) {
 			@Override
+			// this 'QueueEventLink' adds to the fallback queue whenever the consumpsion of an element generates an uncought exception
 			public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
-				log.reportThrowable(t, "Error adding event '"+event.toString()+"' to the queue '"+queueTableName+"'");
+				log.reportThrowable(t, "Error consuming event '"+event.toString()+"' from the queue '"+queueTableName+"'. Adding it to the fallback queue...");
 				try {
-					PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("InsertIntoFallbackQueue");
-					dataBureau.serializeQueueEntry(event, procedure);
-					dba.invokeUpdateProcedure(procedure);
+					Object[] rowParameters = dataBureau.serializeQueueEntry(event);
+					dba.invokeUpdateProcedure(dba.InsertIntoFallbackQueue, rowParameters);
 				} catch (SQLException e) {
 					log.reportThrowable(e, "Error adding event '"+event.toString()+"' to the fallback queue '"+queueTableName+"Fallback'");
 				}
@@ -159,13 +171,13 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		localEventDispatchingQueue.clientsAndListenerMethodInvokers = clientsAndListenerMethodInvokers;
 		
 		// start the consumers dispatch manager thread
-		cdThread = new ConsumerDispatcher(eventsEnumeration, dba);
+		cdThread = new ConsumerDispatcher(log, QUEUE_POOLING_TIME, eventsEnumeration, dba);
 		cdThread.start();
 	}
 
 	@Override
 	public int reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
-		throw new RuntimeException("Listenable Events not available for now, for database queue event link");
+		throw new RuntimeException("Listenable Events not available for database queue event link");
 	}
 
 	@Override
@@ -176,9 +188,8 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		
 		try {
 			// insert into the queue
-			PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("InsertNewQueueElement");
-			dataBureau.serializeQueueEntry(event, procedure);
-			int eventId = (Integer) dba.invokeScalarProcedure(procedure);
+			Object[] rowParameters = dataBureau.serializeQueueEntry(event);
+			int eventId = (Integer) dba.invokeScalarProcedure(dba.InsertNewQueueElement, rowParameters);
 			// notify the consumers dispatch manager
 			synchronized (cdThread) {
 				// inform the internal notification mechanism
@@ -214,7 +225,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 
 	public boolean hasPendingEvents() {
 //System.err.println("="+cdThread.notificationCount);
-		return cdThread.processing || ((QUEUE_POOLING_TIME == 0) && (cdThread.notificationCount > 0));
+		return cdThread.processing || ((cdThread.queuePoolingTime == 0) && (cdThread.notificationCount > 0));
 	}
 	
 	public void stop() {
@@ -237,8 +248,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	/** Returns any 'eventIds' that could not be processed and are on the fallback queue. When this method is called, the fallback queue is
 	 *  emptied */
 	public int[] popFallbackEventIds() throws SQLException {
-		PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("PopFallbackElements");
-		Object[][] data = dba.invokeArrayProcedure(procedure);
+		Object[][] data = dba.invokeArrayProcedure(dba.PopFallbackElements);
 		int[] eventIds = new int[data.length];
 		for (int i=0; i<eventIds.length; i++) {
 			eventIds[i] = (Integer)data[i][0];

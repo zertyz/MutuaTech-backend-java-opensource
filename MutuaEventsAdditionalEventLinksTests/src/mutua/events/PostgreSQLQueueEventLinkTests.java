@@ -1,23 +1,19 @@
 package mutua.events;
 
 import static org.junit.Assert.*;
+import static mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration.LOG;
 
 import java.sql.SQLException;
 import java.util.Hashtable;
 
 import mutua.events.TestEventServer.ETestEventServices;
 import mutua.events.annotations.EventConsumer;
-import mutua.events.postgresql.QueuesPostgreSQLAdapter;
-import mutua.icc.instrumentation.DefaultInstrumentationProperties;
-import mutua.icc.instrumentation.Instrumentation;
-import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
 
 import org.junit.Test;
 
-import adapters.JDBCAdapter;
-import adapters.dto.PreparedProcedureInvocationDto;
+import adapters.IJDBCAdapterParameterDefinition;
 import adapters.exceptions.PreparedProcedureException;
 
 /** <pre>
@@ -34,19 +30,9 @@ import adapters.exceptions.PreparedProcedureException;
 
 public class PostgreSQLQueueEventLinkTests {
 	
-	private static Instrumentation<DefaultInstrumentationProperties, String> log = new Instrumentation<DefaultInstrumentationProperties, String>(
-			"MutuaEventsAdditionalEventLinksTests", DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null);
-	
-	// configure the database
-	static {
-		//JDBCAdapter.CONNECTION_POOL_SIZE = 8;
-		JDBCAdapter.SHOULD_DEBUG_QUERIES = false;
-		QueuesPostgreSQLAdapter.configureQueuesDatabaseModule(log, "venus", 5432, "hangman", "hangman", "hangman");
-	}
-
 	@Test
 	public void testDyingConsumersAndFallbackQueue() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		log.reportRequestStart("testDyingConsumersAndFallbackQueue");
+		LOG.reportRequestStart("testDyingConsumersAndFallbackQueue");
 		String expectedMOPhone = "21991234899";
 		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
 		final String[] observedMOPhone = {""};
@@ -89,7 +75,7 @@ public class PostgreSQLQueueEventLinkTests {
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 		
 		Thread.sleep(100);		
-		log.reportRequestFinish();
+		LOG.reportRequestFinish();
 		link.stop();
 
 		assertEquals("No fallback elements should be present, since no other failure hapenned", 0, link.popFallbackEventIds().length);
@@ -103,7 +89,7 @@ public class PostgreSQLQueueEventLinkTests {
 
 	@Test	
 	public void testAddToQueueAndConsumeFromIt() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		log.reportRequestStart("testAddToQueueAndConsumeFromIt");
+		LOG.reportRequestStart("testAddToQueueAndConsumeFromIt");
 		String expectedMOPhone = "21991234899";
 		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
 		final String[] observedMOPhone = {""};
@@ -126,7 +112,7 @@ public class PostgreSQLQueueEventLinkTests {
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 
 		Thread.sleep(100);		
-		log.reportRequestFinish();		
+		LOG.reportRequestFinish();		
 		link.stop();
 		
 		assertEquals("Wrong 'phone' dequeued", expectedMOPhone, observedMOPhone[0]);
@@ -135,7 +121,7 @@ public class PostgreSQLQueueEventLinkTests {
 	
 	@Test
 	public void testAddSeveralItemsAndConsumeAllAtOnce() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		log.reportRequestStart("testAddSeveralItemsAndConsumeAllAtOnce");		
+		LOG.reportRequestStart("testAddSeveralItemsAndConsumeAllAtOnce");		
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
 		link.resetQueues();
@@ -184,7 +170,7 @@ public class PostgreSQLQueueEventLinkTests {
 			}
 		}
 
-		log.reportRequestFinish();
+		LOG.reportRequestFinish();
 		link.stop();
 		
 		assertEquals("Wrong number of elements consumed", expectedNumberOfEntries, observedNumberOfEntries[0]);
@@ -203,8 +189,20 @@ public class PostgreSQLQueueEventLinkTests {
 }
 
 class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
+	
+	enum GenericParameters implements IJDBCAdapterParameterDefinition {
+
+		METHOD_ID,
+		SERIALIZED_PARAMETERS,;
+
+		@Override
+		public String getParameterName() {
+			return name();
+		}
+	}
+	
 	@Override
-	public void serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException {
+	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry) throws PreparedProcedureException {
 		StringBuffer serializedParameters = new StringBuffer();
 		serializedParameters.append('{');
 		for (Object parameter : entry.getParameters()) {
@@ -213,8 +211,9 @@ class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices
 		}
 		serializedParameters.append('}');
 		String serializedMethodId = entry.getMethodId().toString();
-		preparedProcedure.addParameter("METHOD_ID",  serializedMethodId);
-		preparedProcedure.addParameter("PARAMETERS", serializedParameters.toString());
+		return new Object[] {
+			GenericParameters.METHOD_ID, serializedMethodId,
+			GenericParameters.SERIALIZED_PARAMETERS, serializedParameters.toString()};
 	}
 	@Override
 	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
@@ -225,5 +224,21 @@ class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices
 		String text  = serializedParameters.replaceAll(".*text='([^']*)'.*", "$1");
 		IndirectMethodInvocationInfo<ETestEventServices> entry = new IndirectMethodInvocationInfo<ETestEventServices>(methodId, new MO(phone, text));
 		return entry;
+	}
+
+	@Override
+	public IJDBCAdapterParameterDefinition[] getParametersListForInsertNewQueueElementQuery()  {
+		return GenericParameters.values();
+	}
+	
+	@Override
+	public String getQueueElementFieldList() {
+		return "methodId, genericParameters";
+	}
+
+	@Override
+	public String getFieldsCreationLine() {
+		return 	"methodId          TEXT NOT NULL, " +
+                "genericParameters TEXT NOT NULL, ";
 	}
 }

@@ -1,12 +1,14 @@
 package mutua.events.postgresql;
 
-import java.sql.SQLException;
-import java.util.Arrays;
+import static mutua.icc.instrumentation.DefaultInstrumentationProperties.DIP_MSG;
+import static mutua.icc.instrumentation.JDBCAdapterInstrumentationEvents.IE_DATABASE_ADMINISTRATION_WARNING;
 
-import mutua.events.PostgreSQLQueueEventLink;
+import java.sql.SQLException;
+
 import mutua.icc.instrumentation.Instrumentation;
+import adapters.AbstractPreparedProcedure;
+import adapters.IJDBCAdapterParameterDefinition;
 import adapters.PostgreSQLAdapter;
-import adapters.dto.PreparedProcedureInvocationDto;
 
 /** <pre>
  * QueuesPostgreSQLAdapter.java
@@ -16,65 +18,54 @@ import adapters.dto.PreparedProcedureInvocationDto;
  * Provides 'PostgreSQLAdapter's to manipulate 'IEventLink' queue databases
  * TODO I should study http://ledgersmbdev.blogspot.com.br/2012/09/objectrelational-interlude-messaging-in.html to improve this
  * Also, Study LISTEN/NOTIFY PostgreSQL events
+ * 
+ * Note: this class implements a special variation of "Mutua JDBCAdapter Configuration" pattern, in which case, for flexibility
+ * reasons, we are not using a singleton -- allowing several different queues to be created and requiring clients to manage the
+ * generated instances for themselves.
  *
  * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
 
-public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
+public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 
 
 	// the version information for database tables present on this class, to be stored on the 'Meta' table. Useful for future data conversions.
 	private static String modelVersionForMetaTable = "2015.08.20";
 	
-	// configuration
-	////////////////
+	// Mutua Configurable Class pattern
+	///////////////////////////////////
 	
-	/** The application's instrumentation instance to be used to log PostgreSQL database events */
-	public static Instrumentation<?, ?> log;
-
-	/** Hostname (or IP) of the PostgreSQL server */
-	private static String hostname;
-	/** Connection port for the PostgreSQL server */
-	private static int port;
-	/** The PostgreSQL database with the application's data scope */
-	private static String database;
-	/** The PostgreSQL user name to access 'DATABASE' -- note: administrative rights, such as the creation of tables, might be necessary */
-	private static String user;
-	/** The PostgreSQL plain text password for 'USER' */
-	private static String password;
+	//private static SMSAppModulePostgreSQLAdapter instance = null;
 	
-	
-	public static void configureQueuesDatabaseModule(Instrumentation<?, ?> log,
-	                                                 String hostname, int port, String database, String user, String password) {
-
-		QueuesPostgreSQLAdapter.log = log;
+	// JDBCAdapter default values
+	private static Instrumentation<?, ?> LOG;
+	private static String HOSTNAME;
+	private static int    PORT;
+	private static String DATABASE;
+	private static String USER;
+	private static String PASSWORD;
+	private static boolean ALLOW_DATA_STRUCTURES_ASSERTION;
+	private static boolean SHOULD_DEBUG_QUERIES;
 		
-		QueuesPostgreSQLAdapter.hostname = hostname;
-		QueuesPostgreSQLAdapter.port     = port;
-		QueuesPostgreSQLAdapter.database = database;
-		QueuesPostgreSQLAdapter.user     = user;
-		QueuesPostgreSQLAdapter.password = password;
+	/** method to be called when attempting to configure the default behavior for new instances of 'QueuesPostgreSQLAdapter' */
+	public static void configureDefaultValuesForNewInstances(
+		Instrumentation<?, ?> log, boolean allowDataStructuresAssertion, boolean shouldDebugQueries,
+	    String hostname, int port, String database, String user, String password) {
+		
+		LOG      = log;
+		ALLOW_DATA_STRUCTURES_ASSERTION = allowDataStructuresAssertion;
+		SHOULD_DEBUG_QUERIES            = shouldDebugQueries;
+		HOSTNAME = hostname;
+		PORT     = port;
+		DATABASE = database;
+		USER     = user;
+		PASSWORD = password;
+		
+		//instance = new SMSAppModulePostgreSQLAdapter(LOG);	// start/restart the singleton with the new settings
 	}
-	
-	
-	// fields set by the public get instance methods which must be set via the static field,
-	// since 'getTableDefinitions' is called before the instance fields can be set
-	private        String queueTableName;
-	private        String fieldsCreationLine;
-	private static String staticQueueTableName;
-	private static String staticFieldsCreationLine;
-	
-	private QueuesPostgreSQLAdapter(Instrumentation<?, ?> log, String[][] preparedProceduresDefinitions) throws SQLException {
-		super(log, preparedProceduresDefinitions);
-	}
-
-	@Override
-	protected String[] getCredentials() {
-		return new String[] {hostname, Integer.toString(port), database, user, password};
-	}
-
+		
 	@Override
 	protected String[] getDropDatabaseCommand() {
 		// TODO the Meta table norm may be incorporated into PostgreSQLAdapter
@@ -94,45 +85,31 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	}
 
 
+	private final String queueTableName;
+	private final String fieldsCreationLine;
 	@Override
 	protected String[][] getTableDefinitions() {
-		if (!ALLOW_DATABASE_ADMINISTRATION) {
-			return null;
-		}
-		
-		// on the first run, set the instance fields based on the static ones
-		// (this is needed because the super constructor calls 'getTableDefinitions' before this constructor has the chance to set these fields)
-		if ((queueTableName == null) && (fieldsCreationLine == null)) {
-			if ((staticQueueTableName == null) || (staticFieldsCreationLine == null)) {
-				throw new RuntimeException("one of 'staticQueueTableName' or 'staticFieldsCreationLine' were not provided");
-			}
-			queueTableName     = staticQueueTableName;
-			fieldsCreationLine = staticFieldsCreationLine;
-			staticQueueTableName     = null;
-			staticFieldsCreationLine = null;
-		}
-		
 		return new String[][] {
 			{queueTableName+"Head", "CREATE TABLE "+queueTableName+"Head(" +
-			                        "lastFetchedEventId  INT  NOT NULL);" +
+			                        "lastFetchedEventId  INT  NOT NULL)",
 			                             
 			                        // Meta record (assumes the Meta table was created by 'SMSAppModulePostgreSQLAdapter.java')
 			                        "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Head', '"+modelVersionForMetaTable+"')",
 
 			                        // Default record
-			                        "INSERT INTO "+queueTableName+"Head(lastFetchedEventId) VALUES(-1);"},
+			                        "INSERT INTO "+queueTableName+"Head(lastFetchedEventId) VALUES(-1)"},
 			                             
 		    {queueTableName, "CREATE TABLE "+queueTableName+"(" +
 		                     "eventId    SERIAL        PRIMARY KEY, " +
 		                     fieldsCreationLine +
-		                     "cts        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP);" +
+		                     "cts        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP)",
 		                     
 		                     // Meta record
 		                     "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"', '"+modelVersionForMetaTable+"')"},
 		                     
  			{queueTableName+"Fallback", "CREATE TABLE "+queueTableName+"Fallback(" +
 			                            "eventId   INT        NOT NULL, " +
-			                            "cts       TIMESTAMP  DEFAULT   CURRENT_TIMESTAMP);" +
+			                            "cts       TIMESTAMP  DEFAULT   CURRENT_TIMESTAMP)",
 					                     
 					                    // Meta record
 					                    "INSERT INTO Meta(tableName, modelVersion) VALUES ('"+queueTableName+"Fallback', '"+modelVersionForMetaTable+"')"},
@@ -142,44 +119,120 @@ public class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	
 	/* for testing purposes */
 	public void resetQueues() throws SQLException {
-		PreparedProcedureInvocationDto procedure = new PreparedProcedureInvocationDto("ResetTables");
-		invokeUpdateProcedure(procedure);
+		invokeUpdateProcedure(ResetTables);
 	}
 	
 	/** receives a 'valuesList' like "${PHONE}, ${TEXT}", a 'fieldsList' like "phone, text", a 'comparator' like "=" and
 	 *  a 'logicOperator' like "AND" and return a text like "phone=${PHONE} AND text=${TEXT}"*/
-	private static String getWhereConditions(String valuesList, String fieldsList, String comparator, String logicOperator) {
-		String[] values = valuesList.split(", *");
+	private static Object[] getWhereConditions(IJDBCAdapterParameterDefinition[] valuesList, String fieldsList, String comparator, String logicOperator) {
 		String[] fields = fieldsList.split(", *");
-		String whereConditions = "";
+		Object[] ret = new Object[fields.length*3-1];
+		int index = 0;
 		for (int i=0; i<fields.length; i++) {
-			whereConditions = fields[i] + comparator + values[i] + (i < (fields.length-1) ? logicOperator : "");
+			ret[index++] = fields[i] + comparator;
+			ret[index++] = valuesList[i];
+			if (i < fields.length-1 ) {
+				ret[index++] = logicOperator;
+			}
 		}
-		return whereConditions;
+		return ret;
 	}
 	
+	/** for a 'originalList' like {A, B, C}, returns a list like {A, 'separator', B, 'separator', C} */
+	private static Object[] listObjects(Object[] originalList, Object separator) {
+		Object[] ret = new Object[originalList.length*2 - 1];
+		int index = 0;
+		for (int i=0; i<originalList.length; i++) {
+			Object item = originalList[i];
+			ret[index++] = item;
+			if (i < originalList.length-1) {
+				ret[index++] = separator;
+			}
+		}
+		return ret;
+	}
+
+	/***************
+	** PARAMETERS **
+	***************/
+	
+	public enum QueueParameters implements IJDBCAdapterParameterDefinition {
+
+		LAST_FETCHED_EVENT_ID   (Integer.class),
+		
+		;
+		
+		private QueueParameters(Class<? extends Object> a) {}
+
+		@Override
+		public String getParameterName() {
+			return name();
+		}
+	}
+
+	/***************
+	** STATEMENTS **
+	***************/
+	
+	/** Drop all tables associated with 'queueTable', for testing purposes only */
+	public final AbstractPreparedProcedure ResetTables;
+	/** Inserts a row consisting of 'valuesExpressionForInsertNewQueueElementQuery' on the 'queueTable', returning the assigned 'eventId' */
+	public final AbstractPreparedProcedure InsertNewQueueElement;
+	/** Tells the queue that the head should be moved to {@link QueueParameters#LAST_FETCHED_EVENT_ID} */
+	public final AbstractPreparedProcedure UpdateLastFetchedEventId;
+	/** Used by consumers to get the next queue elements to be processed */
+	public final AbstractPreparedProcedure FetchNextQueueElements;
+	/** Insert procedure on the fallback queue, to be used when the element could not be consumed */ 
+	public final AbstractPreparedProcedure InsertIntoFallbackQueue;
+	/** Retrieves & deletes all 'eventId's from the fallback queue */
+	public final AbstractPreparedProcedure PopFallbackElements;
+
+
+	private QueuesPostgreSQLAdapter(Instrumentation<?, ?> log, String queueTableName, String fieldsCreationLine,
+	                                String queueElementFieldList,
+	                                IJDBCAdapterParameterDefinition[] parametersListForInsertNewQueueElementQuery,
+                                    int queueNumberOfWorkerThreads) throws SQLException {
+		super(log, false, SHOULD_DEBUG_QUERIES, HOSTNAME, PORT, DATABASE, USER, PASSWORD);
+		this.queueTableName     = queueTableName;
+		this.fieldsCreationLine = fieldsCreationLine;
+		// the execution of the following method was delayed by invoking the super constructor with 'false' in order for the fields
+		// needed by 'getTableDefinitions' to be set
+		if (ALLOW_DATA_STRUCTURES_ASSERTION) {
+			log.reportEvent(IE_DATABASE_ADMINISTRATION_WARNING, DIP_MSG, "WARNING: executing delayed 'assureDataStructures' for '"+getClass().getName()+"'");
+			assureDataStructures();
+		}
+		
+		// statements
+		/////////////
+
+		ResetTables = new AbstractPreparedProcedure(
+			"TRUNCATE ",queueTableName," CASCADE;",
+			"TRUNCATE ",queueTableName,"Fallback CASCADE;" +
+			"UPDATE ",queueTableName,"Head SET lastFetchedEventId=-1;");
+		InsertNewQueueElement = new AbstractPreparedProcedure(
+			"INSERT INTO ",queueTableName,"(",queueElementFieldList,") VALUES(",listObjects(parametersListForInsertNewQueueElementQuery, ", "),") RETURNING eventId");
+		UpdateLastFetchedEventId = new AbstractPreparedProcedure(
+			"UPDATE ",queueTableName,"Head SET lastFetchedEventId=",QueueParameters.LAST_FETCHED_EVENT_ID);
+		FetchNextQueueElements = new AbstractPreparedProcedure(
+			"SELECT ",queueElementFieldList,", eventId FROM ",queueTableName," WHERE eventId > (SELECT lastFetchedEventId FROM ",
+			queueTableName,"Head) ORDER BY eventId ASC LIMIT ",queueNumberOfWorkerThreads);
+		InsertIntoFallbackQueue = new AbstractPreparedProcedure(
+			"INSERT INTO ",queueTableName,"Fallback(eventId) SELECT eventId FROM ",queueTableName," WHERE ",
+			getWhereConditions(parametersListForInsertNewQueueElementQuery, queueElementFieldList, "=", " AND ")," ORDER BY eventId DESC");
+		PopFallbackElements = new AbstractPreparedProcedure(
+			"DELETE FROM ",queueTableName,"Fallback RETURNING eventId");
+	}
+
 	// public methods
 	/////////////////
-	
-	/** Gets a JDBCAdapter instance to manage PostgreSQL queues. This method must be synchronized because of the way 'queueTableName'
-	  * and 'fieldsCreationLine' are passed along */
+		
+	/** Gets a JDBCAdapter instance to manage PostgreSQL queues. For advanced instance options, please see {@link #configureQueuesDatabaseModule} */
 	public synchronized static QueuesPostgreSQLAdapter getQueuesDBAdapter(Class<?> eventsEnumeration, String queueTableName, String fieldsCreationLine,
 	                                                                      String queueElementFieldList,
-	                                                                      String valuesExpressionForInsertNewQueueElementQuery) throws SQLException {
-		staticQueueTableName     = queueTableName;
-		staticFieldsCreationLine = fieldsCreationLine;
-		QueuesPostgreSQLAdapter dba = new QueuesPostgreSQLAdapter(log, new String[][] {
-			{"ResetTables",               "TRUNCATE "+queueTableName+" CASCADE;" +
-			                              "TRUNCATE "+queueTableName+"Fallback CASCADE;" +
-			                              "UPDATE "+queueTableName+"Head SET lastFetchedEventId=-1;"},
-			{"InsertNewQueueElement",     "INSERT INTO "+queueTableName+"("+queueElementFieldList+") VALUES("+valuesExpressionForInsertNewQueueElementQuery+") RETURNING eventId"},
-			{"UpdateLastFetchedEventId",  "UPDATE "+queueTableName+"Head SET lastFetchedEventId=${LAST_FETCHED_EVENT_ID}"},
-			{"FetchNextQueueElements",    "SELECT "+queueElementFieldList+", eventId FROM "+queueTableName+" WHERE eventId > (SELECT lastFetchedEventId FROM "+queueTableName+"Head) ORDER BY eventId ASC LIMIT "+PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS},
-			{"InsertIntoFallbackQueue",   "INSERT INTO "+queueTableName+"Fallback(eventId) SELECT eventId FROM "+queueTableName+" WHERE "+getWhereConditions(valuesExpressionForInsertNewQueueElementQuery, queueElementFieldList, "=", "AND")+" ORDER BY eventId DESC"},
-			{"PopFallbackElements",       "DELETE FROM "+queueTableName+"Fallback RETURNING eventId"},
-		});
+	                                                                      IJDBCAdapterParameterDefinition[] parametersListForInsertNewQueueElementQuery,
+	                                                                      int queueNumberOfWorkerThreads) throws SQLException {
 		
-		return dba;
-
+		return new QueuesPostgreSQLAdapter(LOG, queueTableName, fieldsCreationLine, queueElementFieldList,
+		                                   parametersListForInsertNewQueueElementQuery, queueNumberOfWorkerThreads);
 	}
 }

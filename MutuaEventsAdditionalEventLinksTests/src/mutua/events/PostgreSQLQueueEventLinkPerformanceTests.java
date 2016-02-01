@@ -8,9 +8,10 @@ import java.util.Hashtable;
 import mutua.events.TestEventServer.ETestEventServices;
 import mutua.events.annotations.EventConsumer;
 import mutua.smsappmodule.DatabaseAlgorithmAnalysis;
-import mutua.smsappmodule.config.SMSAppModuleConfigurationTests;
+import mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration;
 
 import org.junit.Test;
+
 
 /** <pre>
  * PostgreSQLQueueEventLinkPerformanceTests.java
@@ -28,9 +29,9 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 	
 	// algorithm settings
 	private static int numberOfThreads = 4;
-	private static int totalNumberOfEntries = SMSAppModuleConfigurationTests.PERFORMANCE_TESTS_LOAD_FACTOR * 40000;	// please, be sure the division between this and 'numberOfThreads' is round
+	private static int totalNumberOfEntries = MutuaEventsAdditionalEventLinksTestsConfiguration.PERFORMANCE_TESTS_LOAD_FACTOR * 40000;	// please, be sure the division between this and 'numberOfThreads' is round
+	
 
-		
 	/**********
 	** TESTS **
 	**********/

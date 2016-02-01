@@ -16,6 +16,7 @@ import java.util.Hashtable;
 
 public class SerializationRepository {
 
+	// TODO use a hashmap for performance
 	private Hashtable<Class<?>, ISerializationRule<?>> typeToSerializationRuleMap;
 	
 	public SerializationRepository(Class<?>... serializationRulesEnumerations) {

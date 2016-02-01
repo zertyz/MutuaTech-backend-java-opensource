@@ -2,7 +2,7 @@ package mutua.events;
 
 import mutua.events.TestEventServer.ETestEventServices;
 import mutua.imi.IndirectMethodInvocationInfo;
-import adapters.dto.PreparedProcedureInvocationDto;
+import adapters.IJDBCAdapterParameterDefinition;
 import adapters.exceptions.PreparedProcedureException;
 
 /** <pre>
@@ -18,12 +18,26 @@ import adapters.exceptions.PreparedProcedureException;
 */
 
 public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
-	@Override
-	public void serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry, PreparedProcedureInvocationDto preparedProcedure) throws PreparedProcedureException {
-		MO mo = (MO)entry.getParameters()[0];
-		preparedProcedure.addParameter("PHONE", mo.phone);
-		preparedProcedure.addParameter("TEXT",  mo.text);
+
+	enum SpecializedMOParameters implements IJDBCAdapterParameterDefinition {
+
+		PHONE,
+		TEXT;
+
+		@Override
+		public String getParameterName() {
+			return name();
+		}
 	}
+	
+	@Override
+	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry) throws PreparedProcedureException {
+		MO mo = (MO)entry.getParameters()[0];
+		return new Object[] {
+			SpecializedMOParameters.PHONE, mo.phone,
+			SpecializedMOParameters.TEXT,  mo.text};
+	}
+	
 	@Override
 	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
 		String phone   = (String)databaseRow[0];
@@ -32,14 +46,17 @@ public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETest
 		IndirectMethodInvocationInfo<ETestEventServices> entry = new IndirectMethodInvocationInfo<ETestEventServices>(ETestEventServices.MO_ARRIVED, mo);
 		return entry;
 	}
+	
 	@Override
-	public String getValuesExpressionForInsertNewQueueElementQuery() {
-		return "${PHONE}, ${TEXT}";
+	public IJDBCAdapterParameterDefinition[] getParametersListForInsertNewQueueElementQuery() {
+		return SpecializedMOParameters.values();
 	}
+	
 	@Override
 	public String getQueueElementFieldList() {
 		return "phone, text";
 	}
+	
 	@Override
 	public String getFieldsCreationLine() {
 		return "phone  TEXT NOT NULL, " +
