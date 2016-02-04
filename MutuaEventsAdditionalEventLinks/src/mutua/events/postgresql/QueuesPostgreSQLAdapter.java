@@ -19,7 +19,7 @@ import adapters.PostgreSQLAdapter;
  * TODO I should study http://ledgersmbdev.blogspot.com.br/2012/09/objectrelational-interlude-messaging-in.html to improve this
  * Also, Study LISTEN/NOTIFY PostgreSQL events
  * 
- * Note: this class implements a special variation of "Mutua JDBCAdapter Configuration" pattern, in which case, for flexibility
+ * Note: this class implements a special variation of "Mutua Configurable Class" pattern, in which case, for flexibility
  * reasons, we are not using a singleton -- allowing several different queues to be created and requiring clients to manage the
  * generated instances for themselves.
  *

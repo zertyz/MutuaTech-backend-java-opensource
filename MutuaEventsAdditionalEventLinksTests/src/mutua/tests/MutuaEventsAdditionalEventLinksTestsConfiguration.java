@@ -3,7 +3,6 @@ package mutua.tests;
 import adapters.PostgreSQLAdapter;
 import mutua.events.PostgreSQLQueueEventLink;
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
-import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
@@ -37,11 +36,11 @@ public class MutuaEventsAdditionalEventLinksTestsConfiguration {
 	// database (all)
 	public static boolean ALLOW_DATA_STRUCTURES_ASSERTION = true;
 	public static boolean SHOULD_DEBUG_QUERIES            = false;
-	public static String HOSTNAME = "venus";
-	public static int    PORT     = 5432;
-	public static String DATABASE = "hangman";
-	public static String USER     = "hangman";
-	public static String PASSWORD = "hangman";
+	public static String  HOSTNAME = "venus";
+	public static int     PORT     = 5432;
+	public static String  DATABASE = "hangman";
+	public static String  USER     = "hangman";
+	public static String  PASSWORD = "hangman";
 	
 	// PostgreSQL
 	public static int POSTGRESQL_CONNECTION_POOL_SIZE = PostgreSQLAdapter.CONNECTION_POOL_SIZE;
