@@ -75,7 +75,7 @@ public class MutuaEventsAdditionalEventLinksTestsConfiguration {
 		
 		applyConfiguration();
 		
-		log.reportDebug(MutuaEventsAdditionalEventLinksTestsConfiguration.class.getName() + ": new configuration loaded.");
+		log.reportDebug(MutuaEventsAdditionalEventLinksTestsConfiguration.class.getCanonicalName() + ": new configuration loaded.");
 	}
 
 	public static void applyConfiguration() {

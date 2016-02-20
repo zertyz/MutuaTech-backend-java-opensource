@@ -80,19 +80,24 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 				if ((i == 0) || (i == inserts)) {
 					eventServer.addClient(eventClient);
 				} else if ((i == (inserts-1))) {
-//System.err.print("Waiting for first pass of selects to finish... ");
+					int c=0;
 					while (observedNumberOfEntries[0] != (totalNumberOfEntries / 2)) {
-//System.err.println("still waiting... " + observedNumberOfEntries[0] + " != " + (totalNumberOfEntries / 2));
 						Thread.sleep(1);
+						c++;
+						if (c>100000) {
+							System.err.println("Not all "+(totalNumberOfEntries / 2)+" elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
+						}
 					}
 					eventServer.deleteClient(eventClient);
-//System.err.println("First pass finished.");
 				} else if ((i == (totalNumberOfEntries-1))) {
-//System.err.print("Waiting for second pass of selects to finish... ");
+					int c=0;
 					while (observedNumberOfEntries[0] != totalNumberOfEntries) {
 						Thread.sleep(1);
+						c++;
+						if (c>100000) {
+							System.err.println("Not all "+totalNumberOfEntries+" elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
+						}
 					}
-//System.err.println("Second pass finished.");
 				}
 			}
 		};
