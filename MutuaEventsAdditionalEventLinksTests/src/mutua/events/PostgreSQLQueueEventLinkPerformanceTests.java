@@ -5,7 +5,7 @@ import static org.junit.Assert.fail;
 import java.sql.SQLException;
 import java.util.Hashtable;
 
-import mutua.events.TestEventServer.ETestEventServices;
+import mutua.events.TestAdditionalEventServer.ETestEventServices;
 import mutua.events.annotations.EventConsumer;
 import mutua.smsappmodule.DatabaseAlgorithmAnalysis;
 import mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration;
@@ -42,7 +42,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 		final int selects = inserts;
 		
 		final PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
-		final TestEventServer eventServer = new TestEventServer(link);
+		final TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
 		final boolean[]                 wasClientAdded          = {false};
 		final int[]                     observedNumberOfEntries = {0};
 		final Hashtable<String, String> receivedMOs             = new Hashtable<String, String>(totalNumberOfEntries+1, 1.0f);

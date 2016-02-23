@@ -1,6 +1,6 @@
 package mutua.events;
 
-import mutua.events.TestEventServer.ETestEventServices;
+import mutua.events.TestAdditionalEventServer.ETestEventServices;
 import mutua.imi.IndirectMethodInvocationInfo;
 import adapters.IJDBCAdapterParameterDefinition;
 import adapters.exceptions.PreparedProcedureException;

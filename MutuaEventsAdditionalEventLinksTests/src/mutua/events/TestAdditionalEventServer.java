@@ -1,6 +1,6 @@
 package mutua.events;
 
-import mutua.events.TestEventServer.ETestEventServices;
+import mutua.events.TestAdditionalEventServer.ETestEventServices;
 
 /** <pre>
  * TestEventServer.java
@@ -15,13 +15,13 @@ import mutua.events.TestEventServer.ETestEventServices;
  * @author luiz
  */
 
-public class TestEventServer extends EventServer<ETestEventServices> {
+public class TestAdditionalEventServer extends EventServer<ETestEventServices> {
 	
 	public enum ETestEventServices {
 		MO_ARRIVED,
 	}
 
-	public TestEventServer(IEventLink<ETestEventServices> link) {
+	public TestAdditionalEventServer(IEventLink<ETestEventServices> link) {
 		super(link);
 	}
 	

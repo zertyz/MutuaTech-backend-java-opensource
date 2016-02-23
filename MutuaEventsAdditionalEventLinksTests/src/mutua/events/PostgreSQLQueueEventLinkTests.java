@@ -6,7 +6,7 @@ import static mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration.LOG;
 import java.sql.SQLException;
 import java.util.Hashtable;
 
-import mutua.events.TestEventServer.ETestEventServices;
+import mutua.events.TestAdditionalEventServer.ETestEventServices;
 import mutua.events.annotations.EventConsumer;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
@@ -37,7 +37,8 @@ public class PostgreSQLQueueEventLinkTests {
 		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
 		final String[] observedMOPhone = {""};
 		final String[] observedMOText  = {""};
-		final boolean[] firstRun       = {true};
+		final boolean[] pleaseFail     = {true};
+		final boolean[] wasConsumed    = {false};
 		
 		// set the number of workers to 1 to see if it will die
 		int oldValue = PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS;
@@ -45,13 +46,13 @@ public class PostgreSQLQueueEventLinkTests {
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "DyingQueue", new GenericQueueDataBureau());
 		link.resetQueues();
-		TestEventServer eventServer = new TestEventServer(link);
+		TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
 				
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
 			public void receiveMOFromQueue(MO mo) {
-				if (firstRun[0]) {
-					firstRun[0] = false;
+				wasConsumed[0] = true;
+				if (pleaseFail[0]) {
 					throw new RuntimeException("The first invocation must die, but the second should keep on");
 				}
 				observedMOPhone[0] = mo.phone;
@@ -59,22 +60,26 @@ public class PostgreSQLQueueEventLinkTests {
 			}
 		});
 		
-		assertEquals("No fallback elements should be present before the first failure", 0, link.popFallbackEventIds().length);
+		assertEquals("Wrong number of fallback elements registered", 0, link.popFallbackEventIds().length);
 
-		// add the first event -- this one must raise an exception to see if the worker thread will die
+		// add failed events, which should raise an exception to assure: 1) the worker thread won't die; 2) they will go to the fallback queue
+		pleaseFail[0] = true;
+		for (int i=0; i<10; i++) {
+			eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
+		}
+		
+		// wait for the events to be consumed
+		Thread.sleep(500);
+		
+		assertTrue("First event was not consumed", wasConsumed[0]);
+		assertEquals("Fallback elements should be present after processing failures", 10, link.popFallbackEventIds().length);
+		
+		
+		// add one more event -- this one must be consumed, if the worker didn't die because of the exceptions...
+		pleaseFail[0] = false;
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 		
-		// wait for the first event to be consumed
-		Thread.sleep(100);
-		
-		assertFalse("First event was not consumed", firstRun[0]);
-		assertEquals("A fallback element should be present after a processing failure", 1, link.popFallbackEventIds().length);
-		
-		
-		// add the second event -- this one must be consumed if the worker didn't die because of the exception
-		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
-		
-		Thread.sleep(100);		
+		Thread.sleep(500);		
 		LOG.reportRequestFinish();
 		link.stop();
 
@@ -97,7 +102,7 @@ public class PostgreSQLQueueEventLinkTests {
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "GenericQueue", new GenericQueueDataBureau());
 		link.resetQueues();
-		TestEventServer eventServer = new TestEventServer(link);
+		TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
 		
 		eventServer.addClient(new EventClient<ETestEventServices>() {
 			@EventConsumer({"MO_ARRIVED"})
@@ -125,7 +130,7 @@ public class PostgreSQLQueueEventLinkTests {
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
 		link.resetQueues();
-		final TestEventServer eventServer = new TestEventServer(link);
+		final TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
 		
 
 		final long phoneStart = 21991234800L;

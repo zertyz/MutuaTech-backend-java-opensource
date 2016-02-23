@@ -160,6 +160,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
 				log.reportThrowable(t, "Error consuming event '"+event.toString()+"' from the queue '"+queueTableName+"'. Adding it to the fallback queue...");
 				try {
+					// TODO 'pushFallback' should receive the 'eventId', shouldn't it?
 					Object[] rowParameters = dataBureau.serializeQueueEntry(event);
 					dba.invokeUpdateProcedure(dba.InsertIntoFallbackQueue, rowParameters);
 				} catch (SQLException e) {

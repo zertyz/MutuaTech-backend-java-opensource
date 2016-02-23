@@ -218,7 +218,7 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 			queueTableName,"Head) ORDER BY eventId ASC LIMIT ",queueNumberOfWorkerThreads);
 		InsertIntoFallbackQueue = new AbstractPreparedProcedure(
 			"INSERT INTO ",queueTableName,"Fallback(eventId) SELECT eventId FROM ",queueTableName," WHERE ",
-			getWhereConditions(parametersListForInsertNewQueueElementQuery, queueElementFieldList, "=", " AND ")," ORDER BY eventId DESC");
+			getWhereConditions(parametersListForInsertNewQueueElementQuery, queueElementFieldList, "=", " AND ")," ORDER BY eventId DESC LIMIT 1");
 		PopFallbackElements = new AbstractPreparedProcedure(
 			"DELETE FROM ",queueTableName,"Fallback RETURNING eventId");
 	}
