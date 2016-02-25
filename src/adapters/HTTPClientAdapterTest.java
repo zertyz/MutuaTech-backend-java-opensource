@@ -39,19 +39,21 @@ public class HTTPClientAdapterTest {
 	
 	@Test
 	public void testSimpleGet() throws IOException {
-		String response = HTTPClientAdapter.requestGet("http://www.wagemobile.com.br", null, "UTF-8");
-		boolean found = response.indexOf("inovadora") != -1;
-		assertTrue("Wage Mobile's site seems to have been downloaded incorrectly", found);
+		String response = HTTPClientAdapter.requestGet("http://instantvas.com", null, "UTF-8");
+		boolean found = response.indexOf("Instant VAS") != -1;
+		assertTrue("Instant VAS' site seems to have been downloaded incorrectly", found);
 	}
 	
 	@Test
 	public void testSimplePost() throws IOException {
 		HTTPRequestDto request_data = new HTTPRequestDto();
-		request_data.addParameter("user",     "casanova");
-		request_data.addParameter("password", "ninhoSMS");
-		String response = HTTPClientAdapter.requestPost("http://apache.iw.us.to/Login/Authenticate", request_data, null, "UTF-8");
-		boolean found = response.indexOf("CasaNova") != -1;
-		assertTrue("Wage Mobile's extranet login form didn't receive a correct post request", found);
+		request_data.addParameter("log",         "zertyz");
+		request_data.addParameter("pwd",         "PicaPau1");
+		request_data.addParameter("testcookie",  "1");
+		request_data.addParameter("redirect_to", "http://dominandoriscos.com.br/wp-admin/");
+		String response = HTTPClientAdapter.requestPost("http://dominandoriscos.com.br/wp-login.php", request_data, null, "UTF-8");
+		boolean found = response.indexOf("Cookies are blocked or not supported by your browser.") != -1;
+		assertTrue("Word Press' login form didn't receive a correct post request", found);
 	}
 	
 	@Test
@@ -193,7 +195,7 @@ public class HTTPClientAdapterTest {
 		int originalTimeout = HTTPClientAdapter.READ_TIMEOUT;
 		try {
 			HTTPClientAdapter.READ_TIMEOUT = 10;
-			HTTPClientAdapter.requestGet("http://mail.mundivox.com:25", null);
+			HTTPClientAdapter.requestGet("http://gizmodo.com/5041005/earths-most-distant-web-cam-pics-went-live-this-week", null);
 		} finally {
 			HTTPClientAdapter.READ_TIMEOUT = originalTimeout;
 		}
