@@ -1,8 +1,8 @@
 package mutua.icc.instrumentation.pour.console;
 
-import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
+import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
@@ -24,7 +24,8 @@ import mutua.serialization.SerializationRepository;
 
 public class InstrumentationPour implements IInstrumentationPour, InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> {
 
-
+	private StringBuffer logLine = new StringBuffer();
+	
 	private ISerializationRule<InstrumentationEventDto> logEventDtoSerializationRule;
 	private SerializationRepository serializer;
 
@@ -43,12 +44,16 @@ public class InstrumentationPour implements IInstrumentationPour, Instrumentatio
 	public void reset() {}
 
 	@Override
-	@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT",
-	                "APPLICATION_INSTRUMENTATION_EVENT"})
+	@InstrumentationPropagableEvent({EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT,
+	                                 EInstrumentationPropagableEvents.APPLICATION_INSTRUMENTATION_EVENT})
 	public void storeInstrumentableEvent(InstrumentationEventDto event) {
-		StringBuffer logLine = new StringBuffer();
-		serializer.serialize(logLine, event);
-		System.out.println(logLine);
+		String l;
+		synchronized (logLine) {
+			logLine.setLength(0);
+			serializer.serialize(logLine, event);
+			l = logLine.toString();
+		}
+		System.out.println(l);
 	}
 
 	@Override

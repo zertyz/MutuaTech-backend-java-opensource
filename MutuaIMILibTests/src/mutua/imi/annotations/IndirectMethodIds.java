@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * ================
  * (created by luiz, Jan 23, 2015)
  *
- * Marks a method with IDs for later indirect invocation, for test demonstration purposes
+ * Marks a method with IDs for later indirect invocation, for testing & demonstration purposes.
  *
  * @see IndirectMethodId
  * @version $Id$
@@ -23,6 +23,6 @@ import java.lang.annotation.Target;
 @Documented
 public @interface IndirectMethodIds {
 
-	String[] value();
+	EClientMethods[] value();
 	
 }

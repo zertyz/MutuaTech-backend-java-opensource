@@ -5,8 +5,8 @@ import static mutua.icc.instrumentation.InstrumentationEvents.ONEPROP_EVENT;
 import static mutua.icc.instrumentation.InstrumentationEvents.TWOPROP_EVENT;
 import static mutua.icc.instrumentation.InstrumentationProperties.DAY_OF_WEEK;
 import static mutua.icc.instrumentation.InstrumentationProperties.MAIL;
-import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
+import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
@@ -68,7 +68,7 @@ public class InstrumentationTests {
 	@Test
 	public void customPropagableInstrumentationEventClientTest() throws IndirectMethodNotFoundException {
 		log.addInstrumentationPropagableEventsClient(new InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents>() {
-			@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT"})
+			@InstrumentationPropagableEvent(EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT)
 			public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto event) {
 				InstrumentableEvent instrumentableEvent = event.getEvent();
 				if (instrumentableEvent == log.REQUEST_START_EVENT) {

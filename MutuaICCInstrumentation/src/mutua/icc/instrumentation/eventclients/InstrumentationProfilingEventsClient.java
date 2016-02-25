@@ -3,12 +3,12 @@ package mutua.icc.instrumentation.eventclients;
 import java.io.IOException;
 import java.util.Hashtable;
 
-import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.IInstrumentableEvent;
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.InstrumentableEvent;
 import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
+import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.icc.instrumentation.pour.PourFactory;
@@ -51,7 +51,7 @@ public class InstrumentationProfilingEventsClient implements InstrumentationProp
 		}
 	}
 
-	@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT"})
+	@InstrumentationPropagableEvent(EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT)
 	public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto applicationEvent) throws IOException {
 		InstrumentableEvent instrumentableEvent = applicationEvent.getEvent();
 		String applicationName = applicationEvent.getApplicationName();

@@ -40,34 +40,24 @@ public class EventServer<SERVICE_EVENTS_ENUMERATION> {
 		link.reportConsumableEvent(event);
 	}
 	
-	protected boolean dispatchNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
-		if (link.areEventsNotConsumable(serviceId)) {
-			return false;
-		} else {
-			link.reportConsumableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
-			return true;
-		}
+	/** @see IEventLink#addListener(EventClient) */
+	public boolean addListener(EventClient<SERVICE_EVENTS_ENUMERATION> listenerClient) throws IndirectMethodNotFoundException {
+		return link.addListener(listenerClient);
 	}
 	
-	protected boolean dispatchListenableAndNeedToBeConsumedEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
-		if (link.areEventsNotConsumable(serviceId)) {
-			return false;
-		} else {
-			IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters);
-			link.reportListenableEvent(event);
-			link.reportConsumableEvent(event);
-			return true;
-		}
+	/** @see IEventLink#removeListener(EventClient) */
+	public boolean removeListener(EventClient<SERVICE_EVENTS_ENUMERATION> listenerClient) {
+		return link.removeListener(listenerClient);
 	}
 	
-	/** @see IEventLink#addClient(EventClient) */
-	public boolean addClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) throws IndirectMethodNotFoundException {
-		return link.addClient(client);
+	/** @see IEventLink#setConsumer(EventClient) */
+	public void setConsumer(EventClient<SERVICE_EVENTS_ENUMERATION> consumerClient) throws IndirectMethodNotFoundException {
+		link.setConsumer(consumerClient);
 	}
 	
-	/** @see IEventLink#deleteClient(EventClient) */
-	public boolean deleteClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) {
-		return link.deleteClient(client);
+	/** @see IEventLink#unsetConsumer() */
+	public void unsetConsumer() {
+		link.unsetConsumer();
 	}
 	
 }

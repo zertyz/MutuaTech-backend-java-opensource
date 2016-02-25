@@ -1,15 +1,17 @@
 package mutua.events;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
-
-import mutua.events.TestQueueEventServer.EQueueEventLinkServices;
-import mutua.events.annotations.EventConsumer;
-import mutua.imi.IndirectMethodInvocationInfo;
-import mutua.imi.IndirectMethodNotFoundException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 import org.junit.Test;
+
+import mutua.events.annotations.EEventNotifyeeType;
+import mutua.imi.IndirectMethodInvocationInfo;
+import mutua.imi.IndirectMethodNotFoundException;
 
 /** <pre>
  * QueueEventLinkTests.java
@@ -28,12 +30,12 @@ public class QueueEventLinkTests {
 	@Test
 	public void testLateConsumerAddition() throws IndirectMethodNotFoundException, InterruptedException {
 		String expectedEventInfo = "added before there were consumers";
-		TestQueueEventClient eventClient = new TestQueueEventClient(0, 1);
-		IEventLink<EQueueEventLinkServices> link = new QueueEventLink<EQueueEventLinkServices>(EQueueEventLinkServices.class, 10, 10);
+		TestQueueEventClient consumerClient = new TestQueueEventClient(0, 1);
+		IEventLink<EQueueEventLinkServices> link = new QueueEventLink<EQueueEventLinkServices>(EQueueEventLinkServices.class, new Class[] {TestQueueEventConsumer.class}, 10, 10);
 		link.reportConsumableEvent(new IndirectMethodInvocationInfo<EQueueEventLinkServices>(EQueueEventLinkServices.ENQUEUEABLE_EVENT, 0, expectedEventInfo));
-		link.addClient(eventClient);
+		link.setConsumer(consumerClient);
 		Thread.sleep(1000);
-		assertEquals("Late added client wasn't able to consume the event", expectedEventInfo, eventClient.infos[0]);
+		assertEquals("Late added client wasn't able to consume the event", expectedEventInfo, consumerClient.infos[0]);
 		
 	}
 
@@ -53,7 +55,6 @@ public class QueueEventLinkTests {
 	
 }
 
-
 class TestQueueEventClient implements EventClient<EQueueEventLinkServices> {
 	
 	public String[] infos;
@@ -65,7 +66,7 @@ class TestQueueEventClient implements EventClient<EQueueEventLinkServices> {
 		this.infos = new String[length];
 	}
 	
-	@EventConsumer({"ENQUEUEABLE_EVENT"})
+	@TestQueueEventConsumer(EQueueEventLinkServices.ENQUEUEABLE_EVENT)
 	public void consumeFromTheQueue(int i, String info) throws InterruptedException {
 		if (delay > 0) {
 			Thread.sleep(delay);
@@ -76,18 +77,29 @@ class TestQueueEventClient implements EventClient<EQueueEventLinkServices> {
 	
 }
 
+// 'EventConsumer' & 'EventListener' Events Enumeration & Annotation pattern implementation
+///////////////////////////////////////////////////////////////////////////////////////////
+
+enum EQueueEventLinkServices {
+	ENQUEUEABLE_EVENT,
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@interface TestQueueEventConsumer {
+	EQueueEventLinkServices[] value();
+}
+
+
 class TestQueueEventServer extends EventServer<EQueueEventLinkServices> {
 
-	public enum EQueueEventLinkServices {
-		ENQUEUEABLE_EVENT,
-	}
-	
-	private static IEventLink<EQueueEventLinkServices> link = new QueueEventLink<EQueueEventLinkServices>(EQueueEventLinkServices.class, 10, 10);
+	private static IEventLink<EQueueEventLinkServices> link = new QueueEventLink<EQueueEventLinkServices>(EQueueEventLinkServices.class, 
+		new Class[] {TestQueueEventConsumer.class}, 10, 10);
 
 	protected TestQueueEventServer(TestQueueEventClient eventClient) {
 		super(link);
 		try {
-			addClient(eventClient);
+			setConsumer(eventClient);
 		} catch (IndirectMethodNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -95,7 +107,7 @@ class TestQueueEventServer extends EventServer<EQueueEventLinkServices> {
 
 	public void addToTheQueue(int i, String info) {
 		System.out.println("Adding ["+i+"]:='"+info+"'");
-		dispatchNeedToBeConsumedEvent(EQueueEventLinkServices.ENQUEUEABLE_EVENT, i, info);
+		dispatchConsumableEvent(EQueueEventLinkServices.ENQUEUEABLE_EVENT, i, info);
 	}
 
 }

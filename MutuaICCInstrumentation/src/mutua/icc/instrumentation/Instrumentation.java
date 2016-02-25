@@ -5,6 +5,10 @@ import static mutua.icc.instrumentation.DefaultInstrumentationProperties.*;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.WeakHashMap;
 
@@ -39,6 +43,12 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	///////////////////////
 	// for the event propagation among different clients (the
 	// one that generates logs, the profiling, reporting, etc)
+	// implements the 'EventConsumer' & 'EventListener'
+	// Events Enumeration & Annotation pattern
+	
+	@Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD) public @interface InstrumentationPropagableEvent {
+		EInstrumentationPropagableEvents[] value();
+	}
 	
 	public enum EInstrumentationPropagableEvents {
 		INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT,
@@ -136,7 +146,7 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 
 		// add the default instrumentation propagable events consumer (the instrumentation poor notifier)
 		try {
-			super.addClient(pour);
+			super.addListener(pour);
 		} catch (IndirectMethodNotFoundException e) {
 			String msg = "Exception while initializing the Instrumentation Propagable Events framework";
 			InstrumentationEventDto event = getInstrumentationEvent(DIE_UNCOUGHT_EXCEPTION, DIP_MSG, msg, DIP_THROWABLE, e);
@@ -173,7 +183,7 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	                       IInstrumentableEvent... instrumentableEvents) {
 		
 		this(applicationName, requestProperty,
-			 new DirectEventLink<EInstrumentationPropagableEvents>(EInstrumentationPropagableEvents.class),
+			 new DirectEventLink<EInstrumentationPropagableEvents>(EInstrumentationPropagableEvents.class, new Class[] {InstrumentationPropagableEvent.class}),
 			 pourType, descriptorReference,
 			 instrumentableEvents);
 		
@@ -299,6 +309,6 @@ public class Instrumentation<REQUEST_PROPERTY_TYPE extends IInstrumentableProper
 	}
 	
 	public boolean addInstrumentationPropagableEventsClient(InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> instrumentationPropagableEventsClient) throws IndirectMethodNotFoundException {
-		return super.addClient(instrumentationPropagableEventsClient);
+		return super.addListener(instrumentationPropagableEventsClient);
 	}
 }

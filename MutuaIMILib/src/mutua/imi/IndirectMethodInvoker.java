@@ -3,6 +3,7 @@ package mutua.imi;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Hashtable;
 
 /** <pre>
@@ -22,28 +23,31 @@ import java.util.Hashtable;
 public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 	
 	private final Object methodsClassInstance;
-	private final Hashtable<METHOD_ID_TYPE, Method> methodIdToMethodMap;
+	// TODO create reentrant and performance tests & replace this with a HashMap
+	private final HashMap<METHOD_ID_TYPE, Method> methodIdToMethodMap;
 	private final Class<? extends Annotation>[] annotationClasses;
 	
 	
-	private Method findMethodByNameOrAnnotations(Class<?> c, String methodName) throws IllegalArgumentException, SecurityException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+	private Method findMethodByAnnotations(Class<?> c, Enum<?> methodEnumerationValue) throws IllegalArgumentException, SecurityException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		Method[] methods = c.getMethods();
 		for (Method method : methods) {
-			if (method.getName().equals(methodName)) {
-				return method;
-			} else for (Class<? extends Annotation> annotationClass : annotationClasses) {
+			for (Class<? extends Annotation> annotationClass : annotationClasses) {
 				if (method.isAnnotationPresent(annotationClass)) {
 					Annotation annotationInstance = method.getAnnotation(annotationClass);
-					Object annotationValue = annotationClass.getMethod("value").invoke(annotationInstance);
-					if (annotationValue instanceof String) {
-						String methodId = (String)annotationValue;
-						if (methodId.equals(methodName)) {
+					
+					// invoke the annotation
+					Method am = annotationClass.getMethod("value");
+					am.setAccessible(true);		// this allows inner class annotations
+					Object annotationValue = am.invoke(annotationInstance);
+					
+					if (annotationValue instanceof Enum<?>) {
+						if (annotationValue == methodEnumerationValue) {
 							return method;
 						}
-					} else if (annotationValue instanceof String[]) {
-						String[] methodIds = (String[])annotationValue;
-						for (String methodId: methodIds) {
-							if (methodId.equals(methodName)) {
+					} else if (annotationValue instanceof Enum<?>[]) {
+						Enum<?>[] enumValues= (Enum<?>[])annotationValue;
+						for (Enum<?> enumValue : enumValues) {
+							if (enumValue == methodEnumerationValue) {
 								return method;
 							}
 						}
@@ -69,12 +73,12 @@ public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 	public IndirectMethodInvoker(Object methodsClassInstance, Class<METHOD_ID_TYPE> enumeration, Class<? extends Annotation>... annotationClasses) throws IndirectMethodNotFoundException {
 		this.methodsClassInstance = methodsClassInstance;
 		this.annotationClasses    = annotationClasses;
-		methodIdToMethodMap = new Hashtable<METHOD_ID_TYPE, Method>();
+		methodIdToMethodMap = new HashMap<METHOD_ID_TYPE, Method>();
 		METHOD_ID_TYPE[] methodIds = enumeration.getEnumConstants();
 		Class<?> c = methodsClassInstance.getClass();
 		for (int i=0; i<methodIds.length; i++) try {
-			String methodName = ((Enum<?>)methodIds[i]).name();
-			Method method     = findMethodByNameOrAnnotations(c, methodName);
+			Enum<?> methodEnumerationValue = ((Enum<?>)methodIds[i]);
+			Method method                  = findMethodByAnnotations(c, methodEnumerationValue);
 			if (method == null) {
 				//throw new IndirectMethodNotFoundException(this, methodName);
 			} else {
@@ -95,5 +99,10 @@ public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	@Override
+	public String toString() {
+		return methodsClassInstance.getClass().getName();
 	}
 }

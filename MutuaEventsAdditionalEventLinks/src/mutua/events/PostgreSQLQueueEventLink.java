@@ -3,10 +3,10 @@ package mutua.events;
 import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationEvents.*;
 import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.*;
 
+import java.lang.annotation.Annotation;
 import java.sql.SQLException;
 
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
-import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
@@ -37,15 +37,19 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	/** The amount of milliseconds the PostgreSQLQueueEventLink ConsumerDispatcher thread should wait between queries for new " +
 	 *  "queue entries to process. Set to 0 to rely on the internal notification mechanisms and only when queue producers and " +
 	 *  "consumers are running on the same machine and on the same process. */
-	public static long QUEUE_POOLING_TIME = 0;
+	private static long QUEUE_POOLING_TIME = 0;
 	/** The number of threads that will consume the queue events */
-	public static int  QUEUE_NUMBER_OF_WORKER_THREADS = 10;
+	private static int  QUEUE_NUMBER_OF_WORKER_THREADS = 10;
+	/** The annotation classes for the {@link IEventLink} */
+	private static Class<? extends Annotation>[] ANNOTATION_CLASSES;
 	
-	/** method to be called when attempting to configure the default behavior for new instances of 'PostgreSQLQueueEventLink'.
-	 *  @param queuePoolingTime if < 0, the default value won't be touched
+	/** method to be called when attempting to configure the default behavior for new instances of 'PostgreSQLQueueEventLink'.<pre>
+	 *  @param annotationClasses            the Annotation classes that should annotate methods which will consume the events hereby
+	 *  @param queuePoolingTime             if < 0, the default value won't be touched
 	 *  @param queueNumberOfWorkerThreads   if <= 0, the default value won't be touched */
-	public static void configureDefaultValuesForNewInstances(Instrumentation<?, ?> log, long queuePoolingTime, int queueNumberOfWorkerThreads) {		
-			LOG = log;
+	public static void configureDefaultValuesForNewInstances(Instrumentation<?, ?> log, Class<? extends Annotation>[] annotationClasses, long queuePoolingTime, int queueNumberOfWorkerThreads) {		
+			LOG                            = log;
+			ANNOTATION_CLASSES             = annotationClasses;
 			QUEUE_POOLING_TIME             = queuePoolingTime           >= 0 ? queuePoolingTime           : QUEUE_POOLING_TIME;
 			QUEUE_NUMBER_OF_WORKER_THREADS = queueNumberOfWorkerThreads >  0 ? queueNumberOfWorkerThreads : QUEUE_NUMBER_OF_WORKER_THREADS;;
 	}
@@ -74,8 +78,8 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		@Override
 		public void run() {
 			
-			// wait until there are consumers -- addClient notifies 'this'
-			if (clientsAndConsumerMethodInvokers.size() == 0) try {
+			// wait until there is a consumer -- 'addConsumer' notifies 'this'
+			if (consumerMethodInvoker == null) try {
 				synchronized (this) {
 					wait();
 				}
@@ -141,9 +145,9 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	private   final ConsumerDispatcher                                   cdThread;
 	
 
-	public PostgreSQLQueueEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration, final String queueTableName,
-	                                final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau) throws SQLException {
-		super(eventsEnumeration);
+	public PostgreSQLQueueEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration,
+	                                final String queueTableName, final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau) throws SQLException {
+		super(eventsEnumeration, ANNOTATION_CLASSES);
 		this.log = LOG;
 		this.queueTableName = queueTableName;
 		this.dataBureau = dataBureau;
@@ -154,7 +158,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		
 		// creates an 'QueueEventLink' that will report events to the listeners and consumers of this instance
 		int localEventDispatchingQueueCapacity = 2*QUEUE_NUMBER_OF_WORKER_THREADS;
-		localEventDispatchingQueue = new QueueEventLink<SERVICE_EVENTS_ENUMERATION>(eventsEnumeration, localEventDispatchingQueueCapacity, QUEUE_NUMBER_OF_WORKER_THREADS) {
+		localEventDispatchingQueue = new QueueEventLink<SERVICE_EVENTS_ENUMERATION>(eventsEnumeration, ANNOTATION_CLASSES, localEventDispatchingQueueCapacity, QUEUE_NUMBER_OF_WORKER_THREADS) {
 			@Override
 			// this 'QueueEventLink' adds to the fallback queue whenever the consumpsion of an element generates an uncought exception
 			public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
@@ -168,7 +172,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 				}
 			}
 		};
-		localEventDispatchingQueue.clientsAndConsumerMethodInvokers = clientsAndConsumerMethodInvokers;
+		localEventDispatchingQueue.consumerMethodInvoker            = consumerMethodInvoker;
 		localEventDispatchingQueue.clientsAndListenerMethodInvokers = clientsAndListenerMethodInvokers;
 		
 		// start the consumers dispatch manager thread
@@ -210,18 +214,20 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	
 	
 	@Override
-	public boolean addClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) throws IndirectMethodNotFoundException {
-		boolean result = localEventDispatchingQueue.addClient(client);
+	public void setConsumer(EventClient<SERVICE_EVENTS_ENUMERATION> consumerClient) throws IndirectMethodNotFoundException {
+		localEventDispatchingQueue.setConsumer(consumerClient);
+		consumerMethodInvoker = localEventDispatchingQueue.consumerMethodInvoker;
+		// notify that the processing of events may commence
 		synchronized (cdThread) {
 			cdThread.notify();
 		}
-		return result;
 	}
 
 	@Override
-	public boolean deleteClient(EventClient<SERVICE_EVENTS_ENUMERATION> client) {
+	public void unsetConsumer() {
 		// TODO: what would happen if we delete all consumers while there are still elements on the queue? Fix for this scenario
-		return localEventDispatchingQueue.deleteClient(client);
+		localEventDispatchingQueue.unsetConsumer();
+		consumerMethodInvoker = localEventDispatchingQueue.consumerMethodInvoker;
 	}
 
 	public boolean hasPendingEvents() {

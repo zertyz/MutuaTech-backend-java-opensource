@@ -6,8 +6,8 @@ import java.sql.SQLException;
 import java.util.Hashtable;
 
 import mutua.events.TestAdditionalEventServer.ETestEventServices;
-import mutua.events.annotations.EventConsumer;
-import mutua.smsappmodule.DatabaseAlgorithmAnalysis;
+import mutua.events.TestAdditionalEventServer.TestEventConsumer;
+import mutua.tests.DatabaseAlgorithmAnalysis;
 import mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration;
 
 import org.junit.Test;
@@ -42,8 +42,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 		final int selects = inserts;
 		
 		final PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
-		final TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
-		final boolean[]                 wasClientAdded          = {false};
+		final TestAdditionalEventServer eventServer             = new TestAdditionalEventServer(link);
 		final int[]                     observedNumberOfEntries = {0};
 		final Hashtable<String, String> receivedMOs             = new Hashtable<String, String>(totalNumberOfEntries+1, 1.0f);
 		
@@ -54,14 +53,12 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 		}
 		
 		final EventClient<ETestEventServices> eventClient = new EventClient<ETestEventServices>() {
-			@EventConsumer({"MO_ARRIVED"})
-			public void receiveMOFromQueue(MO mo) {
-				synchronized (observedNumberOfEntries) {
-					observedNumberOfEntries[0]++;
-				}
+			@TestEventConsumer(ETestEventServices.MO_ARRIVED)
+			public synchronized void receiveMOFromQueue(MO mo) {
+				observedNumberOfEntries[0]++;
 				if (receivedMOs.containsKey(mo.phone)) {
 					fail("Double consumption attempt for phone '"+mo.phone+"'");
-//					System.err.println("Double consumption attempt for phone '"+mo.phone+"'");
+					System.err.println("Double consumption attempt for phone '"+mo.phone+"'");
 //					System.exit(1);
 				}
 				receivedMOs.put(mo.phone, mo.text);
@@ -78,17 +75,18 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 			}
 			public void selectLoopCode(int i) throws Throwable {
 				if ((i == 0) || (i == inserts)) {
-					eventServer.addClient(eventClient);
+					eventServer.setConsumer(eventClient);
 				} else if ((i == (inserts-1))) {
 					int c=0;
 					while (observedNumberOfEntries[0] != (totalNumberOfEntries / 2)) {
 						Thread.sleep(1);
 						c++;
 						if (c>100000) {
-							System.err.println("Not all "+(totalNumberOfEntries / 2)+" elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
+							System.err.println("Not all "+(totalNumberOfEntries / 2)+" (half) elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
+							Thread.sleep(10000);
 						}
 					}
-					eventServer.deleteClient(eventClient);
+					eventServer.unsetConsumer();
 				} else if ((i == (totalNumberOfEntries-1))) {
 					int c=0;
 					while (observedNumberOfEntries[0] != totalNumberOfEntries) {
@@ -96,6 +94,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 						c++;
 						if (c>100000) {
 							System.err.println("Not all "+totalNumberOfEntries+" elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
+							Thread.sleep(10000);
 						}
 					}
 				}

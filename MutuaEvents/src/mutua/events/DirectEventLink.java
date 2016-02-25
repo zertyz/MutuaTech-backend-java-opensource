@@ -1,5 +1,7 @@
 package mutua.events;
 
+import java.lang.annotation.Annotation;
+
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodInvoker;
 import mutua.imi.IndirectMethodNotFoundException;
@@ -18,8 +20,8 @@ import mutua.imi.IndirectMethodNotFoundException;
 
 public class DirectEventLink<SERVICE_EVENTS_ENUMERATION> extends IEventLink<SERVICE_EVENTS_ENUMERATION> {
 
-	public DirectEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration) {
-		super(eventsEnumeration);
+	public DirectEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration, Class<? extends Annotation>[] annotationClasses) {
+		super(eventsEnumeration, annotationClasses);
 	}
 
 	@Override
@@ -35,11 +37,10 @@ public class DirectEventLink<SERVICE_EVENTS_ENUMERATION> extends IEventLink<SERV
 
 	@Override
 	public int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
-		for (EventClient<SERVICE_EVENTS_ENUMERATION> client : clientsAndConsumerMethodInvokers.keySet()) try {
-			IndirectMethodInvoker<SERVICE_EVENTS_ENUMERATION> imi = clientsAndConsumerMethodInvokers.get(client);
-			imi.invokeMethod(event);
-		} catch (IndirectMethodNotFoundException e) {
-			//e.printStackTrace();
+		try {
+			consumerMethodInvoker.invokeMethod(event);
+		} catch (Throwable t) {
+			new RuntimeException("Error on consumer client", t);
 		}
 		return -1;
 	}

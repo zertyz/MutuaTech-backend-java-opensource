@@ -7,9 +7,10 @@ import java.sql.SQLException;
 import java.util.Hashtable;
 
 import mutua.events.TestAdditionalEventServer.ETestEventServices;
-import mutua.events.annotations.EventConsumer;
+import mutua.events.TestAdditionalEventServer.TestEventConsumer;
 import mutua.imi.IndirectMethodInvocationInfo;
 import mutua.imi.IndirectMethodNotFoundException;
+import mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration;
 
 import org.junit.Test;
 
@@ -41,19 +42,20 @@ public class PostgreSQLQueueEventLinkTests {
 		final boolean[] wasConsumed    = {false};
 		
 		// set the number of workers to 1 to see if it will die
-		int oldValue = PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS;
-		PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS = 1;
+		int oldValue = MutuaEventsAdditionalEventLinksTestsConfiguration.QUEUE_NUMBER_OF_WORKER_THREADS;
+		MutuaEventsAdditionalEventLinksTestsConfiguration.QUEUE_NUMBER_OF_WORKER_THREADS = 1;
+		MutuaEventsAdditionalEventLinksTestsConfiguration.applyConfiguration();
 		
 		PostgreSQLQueueEventLink<ETestEventServices> link = new PostgreSQLQueueEventLink<ETestEventServices>(ETestEventServices.class, "DyingQueue", new GenericQueueDataBureau());
 		link.resetQueues();
 		TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
 				
-		eventServer.addClient(new EventClient<ETestEventServices>() {
-			@EventConsumer({"MO_ARRIVED"})
+		eventServer.setConsumer(new EventClient<ETestEventServices>() {
+			@TestEventConsumer(ETestEventServices.MO_ARRIVED)
 			public void receiveMOFromQueue(MO mo) {
 				wasConsumed[0] = true;
 				if (pleaseFail[0]) {
-					throw new RuntimeException("The first invocation must die, but the second should keep on");
+					throw new RuntimeException("You should see 10 of these exceptions -- while 'plaseFail' is true...");
 				}
 				observedMOPhone[0] = mo.phone;
 				observedMOText[0]  = mo.text;
@@ -89,7 +91,8 @@ public class PostgreSQLQueueEventLinkTests {
 		assertEquals("Wrong 'text'  dequeued", expectedMOText,  observedMOText[0]);
 		
 		// reset the number of workers
-		PostgreSQLQueueEventLink.QUEUE_NUMBER_OF_WORKER_THREADS = oldValue;
+		MutuaEventsAdditionalEventLinksTestsConfiguration.QUEUE_NUMBER_OF_WORKER_THREADS = oldValue;
+		MutuaEventsAdditionalEventLinksTestsConfiguration.applyConfiguration();
 	}
 
 	@Test	
@@ -104,8 +107,8 @@ public class PostgreSQLQueueEventLinkTests {
 		link.resetQueues();
 		TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
 		
-		eventServer.addClient(new EventClient<ETestEventServices>() {
-			@EventConsumer({"MO_ARRIVED"})
+		eventServer.setConsumer(new EventClient<ETestEventServices>() {
+			@TestEventConsumer(ETestEventServices.MO_ARRIVED)
 			public void receiveMOFromQueue(MO mo) {
 				assertTrue("Attempting to reconsume event", "".equals(observedMOPhone[0]));
 				assertTrue("Attempting to reconsume event", "".equals(observedMOText[0]));
@@ -140,8 +143,8 @@ public class PostgreSQLQueueEventLinkTests {
 		final long[] firstAndLastConsumedEntriesTimeMillis = {-1, -1};	// := {first, last}
 		
 		// consumers
-		eventServer.addClient(new EventClient<ETestEventServices>() {
-			@EventConsumer({"MO_ARRIVED"})
+		eventServer.setConsumer(new EventClient<ETestEventServices>() {
+			@TestEventConsumer(ETestEventServices.MO_ARRIVED)
 			public void receiveMOFromQueue(MO mo) {
 				synchronized (observedNumberOfEntries) {
 					observedNumberOfEntries[0]++;

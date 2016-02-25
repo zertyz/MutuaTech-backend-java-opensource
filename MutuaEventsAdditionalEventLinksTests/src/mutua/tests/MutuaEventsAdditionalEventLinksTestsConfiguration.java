@@ -1,7 +1,10 @@
 package mutua.tests;
 
+import java.lang.annotation.Annotation;
+
 import adapters.PostgreSQLAdapter;
 import mutua.events.PostgreSQLQueueEventLink;
+import mutua.events.TestAdditionalEventServer.TestEventConsumer;
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
 import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
@@ -81,7 +84,7 @@ public class MutuaEventsAdditionalEventLinksTestsConfiguration {
 	public static void applyConfiguration() {
 		PostgreSQLAdapter.configureDefaultValuesForNewInstances(null, POSTGRESQL_CONNECTION_POOL_SIZE);
 		QueuesPostgreSQLAdapter.configureDefaultValuesForNewInstances(LOG, ALLOW_DATA_STRUCTURES_ASSERTION, SHOULD_DEBUG_QUERIES, HOSTNAME, PORT, DATABASE, USER, PASSWORD);
-		PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(LOG, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS);
+		PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(LOG, new Class[] {TestEventConsumer.class}, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS);
 	}
 	
 	static {

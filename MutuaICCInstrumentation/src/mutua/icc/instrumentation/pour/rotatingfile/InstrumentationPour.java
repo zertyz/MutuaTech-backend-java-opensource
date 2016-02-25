@@ -4,8 +4,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import mutua.events.annotations.EventListener;
 import mutua.icc.instrumentation.IInstrumentableProperty;
+import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
+import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.icc.instrumentation.pour.SerializationRules;
@@ -29,6 +30,7 @@ public class InstrumentationPour implements IInstrumentationPour {
 	private ISerializationRule<InstrumentationEventDto> logEventDtoSerializationRule;
 	private SerializationRepository serializer;
 	private FileOutputStream fout;
+	private StringBuffer logLine = new StringBuffer();
 
 	public InstrumentationPour(IInstrumentableProperty[] instrumentationProperties, String logFileName) throws FileNotFoundException {
 		serializer = new SerializationRepository(instrumentationProperties);
@@ -46,13 +48,17 @@ public class InstrumentationPour implements IInstrumentationPour {
 	public void reset() {}
 
 	@Override
-	@EventListener({"INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT",
-	                "APPLICATION_INSTRUMENTATION_EVENT"})
+	@InstrumentationPropagableEvent({EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT,
+                                     EInstrumentationPropagableEvents.APPLICATION_INSTRUMENTATION_EVENT})
 	public void storeInstrumentableEvent(InstrumentationEventDto event) throws IOException {
-		StringBuffer logLine = new StringBuffer();
-		serializer.serialize(logLine, event);
-		logLine.append('\n');
-		fout.write(logLine.toString().getBytes());
+		String l;
+		synchronized (logLine) {
+			logLine.setLength(0);
+			serializer.serialize(logLine, event);
+			logLine.append('\n');
+			l = logLine.toString();
+		}
+		fout.write(l.getBytes());
 	}
 
 	@Override
