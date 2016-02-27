@@ -1,10 +1,11 @@
 package mutua.tests;
 
 import java.lang.annotation.Annotation;
+import java.sql.SQLException;
 
 import adapters.PostgreSQLAdapter;
 import mutua.events.PostgreSQLQueueEventLink;
-import mutua.events.TestAdditionalEventServer.TestEventConsumer;
+import mutua.events.TestAdditionalEventServer.TestAdditionalEvent;
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
 import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
@@ -15,79 +16,78 @@ import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
  * =================================================
  * (created by luiz, Jan 28, 2016)
  *
- * Configures the classes' static options for the 'MutuaEventsAdditionalEventLinks' module.
+ * Configure the classes' default values for new instances of the 'MutuaEventsAdditionalEventLinks' test application.
+ * 
+ * Typically, the configure* methods on this class must be invoked prior to its usage. 
  * 
  * Follows the "Mutua Configurable Module" pattern.
  *
- * @version $Id$
  * @author luiz
 */
 
 public class MutuaEventsAdditionalEventLinksTestsConfiguration {
 	
 	// log
-	public static Instrumentation<DefaultInstrumentationProperties, String> LOG = new Instrumentation<DefaultInstrumentationProperties, String>(
-		"MutuaEventsAdditionalEventLinksTests", DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null);
+	public static Instrumentation<DefaultInstrumentationProperties, String> LOG;
 	
-	public static int PERFORMANCE_TESTS_LOAD_FACTOR = 1;
+	public static int PERFORMANCE_TESTS_LOAD_FACTOR;
 	
-	// PostgreSQLQueueEventLink
-	public static long QUEUE_POOLING_TIME             = 0;
-	public static int  QUEUE_NUMBER_OF_WORKER_THREADS = 10;
+	// default values
+	/////////////////
+	
+	public final static Class<? extends Annotation>[] ANNOTATION_CLASSES = new Class[] {TestAdditionalEvent.class};
+	
+	// PostgreSQLQueueEventLink default values
+	public final static long QUEUE_POOLING_TIME             = 0;
+	public final static int  QUEUE_NUMBER_OF_WORKER_THREADS = 10;
+	
+	
 
-
-	// database (all)
-	public static boolean ALLOW_DATA_STRUCTURES_ASSERTION = true;
-	public static boolean SHOULD_DEBUG_QUERIES            = false;
-	public static String  HOSTNAME = "venus";
-	public static int     PORT     = 5432;
-	public static String  DATABASE = "hangman";
-	public static String  USER     = "hangman";
-	public static String  PASSWORD = "hangman";
 	
-	// PostgreSQL
-	public static int POSTGRESQL_CONNECTION_POOL_SIZE = PostgreSQLAdapter.CONNECTION_POOL_SIZE;
+	/**************************
+	** CONFIGURATION METHODS **
+	**************************/
 	
 	/** method to be called when attempting to configure the default behavior of 'MutuaEventsAdditionalEventLinksTests' module.
-	 *  The following default values won't be touched if:
-	 *  @param log is null
-	 *  @param performanceTestsLoadFactor is < 0
-	 *  @param postgresqlConnectionPoolSize is <= 0 */
-	public static void configureMutuaEventsAdditionalEventLinksTests(Instrumentation<DefaultInstrumentationProperties, String> log, 
+	 *  The following default values won't be touched if:<pre>
+	 *  @param queuePoolingTime             is -1
+	 *  @param queueNumberOfWorkerThreads   is -1
+	 *  @param postgresqlConnectionPoolSize is -1 */
+	public static void configureDefaultValuesForNewInstances(Instrumentation<DefaultInstrumentationProperties, String> log, 
 		int performanceTestsLoadFactor, long queuePoolingTime, int queueNumberOfWorkerThreads,
-		boolean allowDataStructuresAssertion, boolean shouldDebugQueries,
-		String hostname, int port, String database, String user, String password,
-		int postgresqlConnectionPoolSize) {
+		String postgreSQLconnectionProperties, int postgreSQLConnectionPoolSize,
+		boolean postgreSQLAllowDataStructuresAssertion, boolean postgreSQLShouldDebugQueries,
+		String postgreSQLHostname, int postgreSQLPort, String postgreSQLDatabase, String postgreSQLUser, String postgreSQLPassword) throws SQLException {
 		
-		LOG = log != null ? log : LOG;
+		LOG                           = log;
+		PERFORMANCE_TESTS_LOAD_FACTOR = performanceTestsLoadFactor;		
 		
-		PERFORMANCE_TESTS_LOAD_FACTOR  = performanceTestsLoadFactor >= 0 ? performanceTestsLoadFactor : PERFORMANCE_TESTS_LOAD_FACTOR;
-		QUEUE_POOLING_TIME             = queuePoolingTime;
-		QUEUE_NUMBER_OF_WORKER_THREADS = queueNumberOfWorkerThreads;
+		// PostgreSQL
+		PostgreSQLAdapter.configureDefaultValuesForNewInstances(postgreSQLconnectionProperties, postgreSQLConnectionPoolSize);
+		QueuesPostgreSQLAdapter.configureDefaultValuesForNewInstances(log, postgreSQLAllowDataStructuresAssertion, postgreSQLShouldDebugQueries, postgreSQLHostname, postgreSQLPort, postgreSQLDatabase, postgreSQLUser, postgreSQLPassword);
+		PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(log, queuePoolingTime, queueNumberOfWorkerThreads);
 		
-		ALLOW_DATA_STRUCTURES_ASSERTION = allowDataStructuresAssertion;
-		SHOULD_DEBUG_QUERIES            = shouldDebugQueries;
-		
-		HOSTNAME = hostname;
-		PORT     = port;
-		DATABASE = database;
-		USER     = user;
-		PASSWORD = password;
-		
-		POSTGRESQL_CONNECTION_POOL_SIZE = postgresqlConnectionPoolSize > 0 ? postgresqlConnectionPoolSize : POSTGRESQL_CONNECTION_POOL_SIZE;
-		
-		applyConfiguration();
-		
-		log.reportDebug(MutuaEventsAdditionalEventLinksTestsConfiguration.class.getCanonicalName() + ": new configuration loaded.");
+		System.err.println(MutuaEventsAdditionalEventLinksTestsConfiguration.class.getCanonicalName() + ": test configuration loaded.");
+
 	}
 
-	public static void applyConfiguration() {
-		PostgreSQLAdapter.configureDefaultValuesForNewInstances(null, POSTGRESQL_CONNECTION_POOL_SIZE);
-		QueuesPostgreSQLAdapter.configureDefaultValuesForNewInstances(LOG, ALLOW_DATA_STRUCTURES_ASSERTION, SHOULD_DEBUG_QUERIES, HOSTNAME, PORT, DATABASE, USER, PASSWORD);
-		PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(LOG, new Class[] {TestEventConsumer.class}, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS);
-	}
-	
 	static {
-		applyConfiguration();
+		
+		try {
+			configureDefaultValuesForNewInstances(
+				// log
+					new Instrumentation<DefaultInstrumentationProperties, String>("MutuaEventsAdditionalEventLinksTests",
+						DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null),
+				// load factor, pooling time and worker threads
+				1, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS,
+				// PostgreSQL properties
+				null,	// connection properties
+				-1,		// connection pool size
+				true,	// assert structures
+				false,	// debug queries
+				"venus", 5432, "hangman", "hangman", "hangman");
+		} catch (SQLException e) {
+			throw new ExceptionInInitializerError(e);
+		}
 	}
 }

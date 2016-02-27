@@ -1,6 +1,6 @@
 package mutua.events;
 
-import mutua.events.TestAdditionalEventServer.ETestEventServices;
+import mutua.events.TestAdditionalEventServer.ETestAdditionalEventServices;
 import mutua.imi.IndirectMethodInvocationInfo;
 import adapters.IJDBCAdapterParameterDefinition;
 import adapters.exceptions.PreparedProcedureException;
@@ -17,7 +17,7 @@ import adapters.exceptions.PreparedProcedureException;
  * @author luiz
 */
 
-public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestEventServices> {
+public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestAdditionalEventServices> {
 
 	enum SpecializedMOParameters implements IJDBCAdapterParameterDefinition {
 
@@ -31,7 +31,7 @@ public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETest
 	}
 	
 	@Override
-	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestEventServices> entry) throws PreparedProcedureException {
+	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestAdditionalEventServices> entry) throws PreparedProcedureException {
 		MO mo = (MO)entry.getParameters()[0];
 		return new Object[] {
 			SpecializedMOParameters.PHONE, mo.phone,
@@ -39,11 +39,11 @@ public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETest
 	}
 	
 	@Override
-	public IndirectMethodInvocationInfo<ETestEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
+	public IndirectMethodInvocationInfo<ETestAdditionalEventServices> deserializeQueueEntry(int eventId, Object[] databaseRow) {
 		String phone   = (String)databaseRow[0];
 		String text    = (String)databaseRow[1];
 		MO mo = new MO(phone, text);
-		IndirectMethodInvocationInfo<ETestEventServices> entry = new IndirectMethodInvocationInfo<ETestEventServices>(ETestEventServices.MO_ARRIVED, mo);
+		IndirectMethodInvocationInfo<ETestAdditionalEventServices> entry = new IndirectMethodInvocationInfo<ETestAdditionalEventServices>(ETestAdditionalEventServices.MO_ARRIVED, mo);
 		return entry;
 	}
 	

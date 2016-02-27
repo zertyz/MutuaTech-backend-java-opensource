@@ -46,9 +46,7 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 						System.out.println("QueueEventLink ConsumerWorker: Waking up, since we got a notification that a consumer client is now available!");
 					}
 				}
-				
 				consumerMethodInvoker.invokeMethod(event);
-				continue;
 					
 			} catch (Throwable t) {
 				t.printStackTrace();

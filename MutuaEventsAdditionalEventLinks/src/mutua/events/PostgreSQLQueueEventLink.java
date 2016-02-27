@@ -44,12 +44,10 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	private static Class<? extends Annotation>[] ANNOTATION_CLASSES;
 	
 	/** method to be called when attempting to configure the default behavior for new instances of 'PostgreSQLQueueEventLink'.<pre>
-	 *  @param annotationClasses            the Annotation classes that should annotate methods which will consume the events hereby
 	 *  @param queuePoolingTime             if < 0, the default value won't be touched
 	 *  @param queueNumberOfWorkerThreads   if <= 0, the default value won't be touched */
-	public static void configureDefaultValuesForNewInstances(Instrumentation<?, ?> log, Class<? extends Annotation>[] annotationClasses, long queuePoolingTime, int queueNumberOfWorkerThreads) {		
+	public static void configureDefaultValuesForNewInstances(Instrumentation<?, ?> log, long queuePoolingTime, int queueNumberOfWorkerThreads) {		
 			LOG                            = log;
-			ANNOTATION_CLASSES             = annotationClasses;
 			QUEUE_POOLING_TIME             = queuePoolingTime           >= 0 ? queuePoolingTime           : QUEUE_POOLING_TIME;
 			QUEUE_NUMBER_OF_WORKER_THREADS = queueNumberOfWorkerThreads >  0 ? queueNumberOfWorkerThreads : QUEUE_NUMBER_OF_WORKER_THREADS;;
 	}
@@ -86,6 +84,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			} catch (Throwable t) {}
 			
 			int lastFetchedEventId = -1;
+			int lastReentrancyFailureEventId = -1;
 			// main loop
 			while (!stop) {
 				boolean fetched = false;
@@ -94,20 +93,41 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 					Object[][] rowsOfQueueEntries = dba.invokeArrayProcedure(dba.FetchNextQueueElements);
 					for (Object[] queueEntry : rowsOfQueueEntries) {
 						// queueEntry := { [the fields listed by 'dataBureau.getQueueElementFieldList'], eventId}
-						eventId = (Integer)queueEntry[queueEntry.length-1];
+						int newEventId = (Integer)queueEntry[queueEntry.length-1];
+						
+						// piece of code to fix reentrancy issues that could, otherwise, be fixed on PostgeSQL queries -- in the hope it will be faster if fixed here, like this.
+						// the problem consists of: while producing and consuming at the same time, some times the 'FetchNextQueueElements' query will skip a record being inserted,
+						// thus, skipping an eventId. This happens when two records are being inserted at the same time, and the select happens to catch them when the one with the
+						// higher 'eventId' has finished but the other didn't -- causing that eventId to be skipped. This code detects this and provokes the 'FetchNextQueueElements'
+						// query to be run again.
+						if ((eventId != -1) && ((newEventId - eventId) > 1) && (lastReentrancyFailureEventId != eventId)) {
+							//lastReentrancyFailureEventId = eventId;	// cause the next verification to happen only after processing one more event, preventing dead locks
+							                                        // the dead lock protection can be tested by issueing the following command while running the algorithm analysis tests:
+							                                        // INSERT INTO SpecializedMOQueue(phone, text) VALUES(NOW(), 'nada'); DELETE FROM SpecializedMOQueue WHERE eventId IN (SELECT MAX(eventId) FROM SpecializedMOQueue)
+							break;
+						}
+						eventId = newEventId;
+						
 						IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = dataBureau.deserializeQueueEntry(eventId, queueEntry);
 						localEventDispatchingQueue.reportConsumableEvent(event);
 					}
+
+					int delta = eventId - lastFetchedEventId;
+
+					// sanity check
+					if ((lastFetchedEventId != -1) && (eventId != -1) && (delta != rowsOfQueueEntries.length)) {
+						log.reportThrowable(new RuntimeException("delta ("+delta+") differs from rowsOfQueueEntries.length ("+rowsOfQueueEntries.length+")"),
+						                    "DATABASE & QUERIES REENTRANCY PROBLEM -- eventId is growing " + delta + " positions, but the returned row has " + rowsOfQueueEntries.length + " positions!!! A shit happened!! If delta is bigger, some element(s) has(ve) been lost; if delta is greater, some element(s) will be processed twice!!!!");
+					}
+
 					// update the pointers
-					if (rowsOfQueueEntries.length > 0) {
+					if (delta > 0) {
 						fetched = true;
 						synchronized (this) {
-							notificationCount -= rowsOfQueueEntries.length;
+							notificationCount -= delta;
 						}
-						if (eventId > lastFetchedEventId) {
-							lastFetchedEventId = eventId;
-							dba.invokeUpdateProcedure(dba.UpdateLastFetchedEventId, LAST_FETCHED_EVENT_ID, lastFetchedEventId);
-						}
+						lastFetchedEventId = eventId;
+						dba.invokeUpdateProcedure(dba.UpdateLastFetchedEventId, LAST_FETCHED_EVENT_ID, lastFetchedEventId);
 					}
 				} catch (Throwable t) {
 					log.reportThrowable(t, "Exception on ConsumerDispatcher thread");
@@ -145,7 +165,8 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	private   final ConsumerDispatcher                                   cdThread;
 	
 
-	public PostgreSQLQueueEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration,
+	/** @param annotationClasses            the Annotation classes that should annotate methods which will consume the events hereby */
+	public PostgreSQLQueueEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration, Class<? extends Annotation>[] annotationClasses, 
 	                                final String queueTableName, final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau) throws SQLException {
 		super(eventsEnumeration, ANNOTATION_CLASSES);
 		this.log = LOG;
@@ -158,7 +179,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		
 		// creates an 'QueueEventLink' that will report events to the listeners and consumers of this instance
 		int localEventDispatchingQueueCapacity = 2*QUEUE_NUMBER_OF_WORKER_THREADS;
-		localEventDispatchingQueue = new QueueEventLink<SERVICE_EVENTS_ENUMERATION>(eventsEnumeration, ANNOTATION_CLASSES, localEventDispatchingQueueCapacity, QUEUE_NUMBER_OF_WORKER_THREADS) {
+		localEventDispatchingQueue = new QueueEventLink<SERVICE_EVENTS_ENUMERATION>(eventsEnumeration, annotationClasses, localEventDispatchingQueueCapacity, QUEUE_NUMBER_OF_WORKER_THREADS) {
 			@Override
 			// this 'QueueEventLink' adds to the fallback queue whenever the consumpsion of an element generates an uncought exception
 			public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
@@ -167,7 +188,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 					// TODO 'pushFallback' should receive the 'eventId', shouldn't it?
 					Object[] rowParameters = dataBureau.serializeQueueEntry(event);
 					dba.invokeUpdateProcedure(dba.InsertIntoFallbackQueue, rowParameters);
-				} catch (SQLException e) {
+				} catch (Throwable e) {
 					log.reportThrowable(e, "Error adding event '"+event.toString()+"' to the fallback queue '"+queueTableName+"Fallback'");
 				}
 			}
