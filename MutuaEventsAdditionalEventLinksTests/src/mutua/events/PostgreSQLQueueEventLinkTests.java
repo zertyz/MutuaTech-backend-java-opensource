@@ -13,6 +13,7 @@ import mutua.imi.IndirectMethodNotFoundException;
 
 import org.junit.Test;
 
+import adapters.AbstractPreparedProcedure;
 import adapters.IJDBCAdapterParameterDefinition;
 import adapters.exceptions.PreparedProcedureException;
 
@@ -91,7 +92,7 @@ public class PostgreSQLQueueEventLinkTests {
 		//PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(LOG, ANNOTATION_CLASSES, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS);
 	}
 
-	@Test	
+	@Test
 	public void testAddToQueueAndConsumeFromIt() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
 		LOG.reportRequestStart("testAddToQueueAndConsumeFromIt");
 		String expectedMOPhone = "21991234899";
@@ -142,6 +143,85 @@ public class PostgreSQLQueueEventLinkTests {
 		for (long phone=phoneStart; phone<phoneStart+expectedNumberOfEntries; phone++) {
 			eventServer.addToMOQueue(new MO(Long.toString(phone), "This is text number "+(phone-phoneStart)));
 		}
+		
+		// consumer
+		eventServer.setConsumer(new EventClient<ETestAdditionalEventServices>() {
+			@TestAdditionalEvent(ETestAdditionalEventServices.MO_ARRIVED)
+			public void receiveMOFromQueue(MO mo) {
+				synchronized (observedNumberOfEntries) {
+					observedNumberOfEntries[0]++;
+				}
+				if (receivedMOs.containsKey(mo.phone)) {
+					fail("Double consumption attempt for phone '"+mo.phone+"'");
+				}
+				receivedMOs.put(mo.phone, mo.text);
+				if (firstAndLastConsumedEntriesTimeMillis[0] == -1) {
+					firstAndLastConsumedEntriesTimeMillis[0] = System.currentTimeMillis();
+				} else {
+					firstAndLastConsumedEntriesTimeMillis[1] = System.currentTimeMillis();
+				}
+			}
+		});
+
+		// wait for the pending events to be dispatched
+		int attempts = 10;
+		while (link.hasPendingEvents()) {
+			Thread.sleep(1000/attempts);
+			attempts--;
+			if (attempts == 0) {
+				fail("pending events never got processed");
+//				System.err.println("pending events never got processed");
+//				break;
+			}
+		}
+
+		LOG.reportRequestFinish();
+		link.stop();
+		
+		assertEquals("Wrong number of elements consumed", expectedNumberOfEntries, observedNumberOfEntries[0]);
+		for (int i=0; i<expectedNumberOfEntries; i++) {
+			String phone = Long.toString(phoneStart + i);
+			String expectedText  = "This is text number "+i;
+			String observedText  = receivedMOs.get(phone);
+			assertEquals("Wrong specialized queue entry received for phone '"+phone+"'",  expectedText,  observedText);
+		}
+		
+		System.out.println("\n\n" +
+		                   "### Elapsed time between first and last entry consumption: " + (firstAndLastConsumedEntriesTimeMillis[1] - firstAndLastConsumedEntriesTimeMillis[0]) +
+		                   "\n\n");
+	}
+
+	@Test
+	public void testDeleteEvents() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
+		LOG.reportRequestStart("testDeleteEvents");
+
+		SpecializedMOQueueDataBureau dataBureau = new SpecializedMOQueueDataBureau(); 
+		String queueTableName = "SpecializedMOQueue";
+		String queueElementFieldList = dataBureau.getQueueElementFieldList();
+		
+		PostgreSQLQueueEventLink<ETestAdditionalEventServices> link = new PostgreSQLQueueEventLink<ETestAdditionalEventServices>(ETestAdditionalEventServices.class, ANNOTATION_CLASSES, queueTableName, dataBureau);
+		link.resetQueues();
+		final TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
+		
+
+		final long phoneStart = 21991234800L;
+		final Hashtable<String, String> receivedMOs = new Hashtable<String, String>();
+		final int  expectedNumberOfEntries = 100;
+		final int[] observedNumberOfEntries = {0};
+		final long[] firstAndLastConsumedEntriesTimeMillis = {-1, -1};	// := {first, last}
+		
+		// producer
+		for (long phone=phoneStart; phone<phoneStart+expectedNumberOfEntries; phone++) {
+			eventServer.addToMOQueue(new MO(Long.toString(phone), "This is text number "+(phone-phoneStart)));
+			// delete from the queue
+			if (phone == phoneStart+1) {
+				AbstractPreparedProcedure insertAndDeleteElementCommand = new AbstractPreparedProcedure(
+						"INSERT INTO ",queueTableName,"(",queueElementFieldList,") VALUES(",queueElementFieldList.replaceAll("[A-Za-z_]+", "NOW()"),");",
+						"DELETE FROM ",queueTableName," WHERE eventId IN (SELECT MAX(eventId) FROM ",queueTableName,")");
+				link.dba.invokeUpdateProcedure(insertAndDeleteElementCommand);
+			}
+		}
+		
 		
 		// consumer
 		eventServer.setConsumer(new EventClient<ETestAdditionalEventServices>() {

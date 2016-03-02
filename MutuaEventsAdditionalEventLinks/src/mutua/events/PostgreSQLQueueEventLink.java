@@ -58,17 +58,19 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		
 		private final Instrumentation<?, ?> log;
 		private final long queuePoolingTime;
+		private final int  maxFetchableEvents;
 		private final Class<?> eventsEnumeration;
 		private final QueuesPostgreSQLAdapter dba;
 		public boolean stop = false;
-		public boolean processing = true;
-		public int notificationCount = 0;	// for the internal notification mechanism, when 'QUEUE_POOLING_TIME' is 0
+		public boolean processing = false;
+		public boolean hasUnfetchedElements = false;	// for the internal notification mechanism, when 'QUEUE_POOLING_TIME' is 0
 		
-		public ConsumerDispatcher(Instrumentation<?, ?> log, long queuePoolingTime, Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
-			this.log = log;
-			this.queuePoolingTime = queuePoolingTime;
-			this.eventsEnumeration = eventsEnumeration;
-			this.dba = dba;
+		public ConsumerDispatcher(Instrumentation<?, ?> log, long queuePoolingTime, int maxFetchableEvents, Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
+			this.log                = log;
+			this.queuePoolingTime   = queuePoolingTime;
+			this.maxFetchableEvents = maxFetchableEvents;
+			this.eventsEnumeration  = eventsEnumeration;
+			this.dba                = dba;
 			setName("PostgreSQLQueueEventLink ConsumerDispatcher thread");
 
 		}
@@ -83,51 +85,58 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 				}
 			} catch (Throwable t) {}
 			
-			int lastFetchedEventId = -1;
+			processing = true;
+
+			int lastDispatchedEventId = -1;
+			int dbRegisteredLastFetchedEventId = -1;
 			int lastReentrancyFailureEventId = -1;
 			// main loop
 			while (!stop) {
 				boolean fetched = false;
-				int eventId = -1;
 				try {
+					
+					// reentrant block to fetch new elements, keeping track if we need to fetch even more
+					hasUnfetchedElements = false;
 					Object[][] rowsOfQueueEntries = dba.invokeArrayProcedure(dba.FetchNextQueueElements);
+					if (rowsOfQueueEntries.length == maxFetchableEvents) {
+						hasUnfetchedElements = true;
+					}
+					
+					// dispatch the fetched events
 					for (Object[] queueEntry : rowsOfQueueEntries) {
 						// queueEntry := { [the fields listed by 'dataBureau.getQueueElementFieldList'], eventId}
-						int newEventId = (Integer)queueEntry[queueEntry.length-1];
+						int eventId = (Integer)queueEntry[queueEntry.length-1];
 						
-						// piece of code to fix reentrancy issues that could, otherwise, be fixed on PostgeSQL queries -- in the hope it will be faster if fixed here, like this.
-						// the problem consists of: while producing and consuming at the same time, some times the 'FetchNextQueueElements' query will skip a record being inserted,
+						// find a "hole" in the eventId sequence, meaning a reentrancy problem on PostgreSQL has occurred -- or that someone inserted and deleted a record.
+						// Provoke a "fetch again" event, in the hope the missing eventId(s) are fetched.
+						// The problem consists of: while producing and consuming at the same time, some times the 'FetchNextQueueElements' query will skip a record still being inserted,
 						// thus, skipping an eventId. This happens when two records are being inserted at the same time, and the select happens to catch them when the one with the
 						// higher 'eventId' has finished but the other didn't -- causing that eventId to be skipped. This code detects this and provokes the 'FetchNextQueueElements'
 						// query to be run again.
-						if ((eventId != -1) && ((newEventId - eventId) > 1) && (lastReentrancyFailureEventId != eventId)) {
-							//lastReentrancyFailureEventId = eventId;	// cause the next verification to happen only after processing one more event, preventing dead locks
-							                                        // the dead lock protection can be tested by issueing the following command while running the algorithm analysis tests:
-							                                        // INSERT INTO SpecializedMOQueue(phone, text) VALUES(NOW(), 'nada'); DELETE FROM SpecializedMOQueue WHERE eventId IN (SELECT MAX(eventId) FROM SpecializedMOQueue)
-							break;
+						// The whole logic of the event fetching on this algorithm depends on the ascending sort of the eventIds returned by 'FetchNextQueueElements' 
+						if ((lastDispatchedEventId != -1) && ((eventId - lastDispatchedEventId) > 1))  {
+							if (lastReentrancyFailureEventId != eventId) {
+								log.reportDebug("REENTRANCY PROBLEM: eventId(s) between "+lastDispatchedEventId+" and "+eventId+" is(are) missing. Attempting to rerun the query in 1000ms...");
+								hasUnfetchedElements = true;
+								sleep(1000);		// sleep a reasonable time to be sure the problematic INSERT has finished
+								lastReentrancyFailureEventId = eventId;
+								break;
+							} else {
+								log.reportDebug("REENTRANCY PROBLEM DISMISSED: It seems someone deleted eventId(s) between "+lastDispatchedEventId+" and "+eventId+". Skipping the missing ones...");
+							}
 						}
-						eventId = newEventId;
-						
-						IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = dataBureau.deserializeQueueEntry(eventId, queueEntry);
+
+						// dispatch the event
+						lastDispatchedEventId = eventId;
+						IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event = dataBureau.deserializeQueueEntry(lastDispatchedEventId, queueEntry);
 						localEventDispatchingQueue.reportConsumableEvent(event);
 					}
 
-					int delta = eventId - lastFetchedEventId;
-
-					// sanity check
-					if ((lastFetchedEventId != -1) && (eventId != -1) && (delta != rowsOfQueueEntries.length)) {
-						log.reportThrowable(new RuntimeException("delta ("+delta+") differs from rowsOfQueueEntries.length ("+rowsOfQueueEntries.length+")"),
-						                    "DATABASE & QUERIES REENTRANCY PROBLEM -- eventId is growing " + delta + " positions, but the returned row has " + rowsOfQueueEntries.length + " positions!!! A shit happened!! If delta is bigger, some element(s) has(ve) been lost; if delta is greater, some element(s) will be processed twice!!!!");
-					}
-
-					// update the pointers
-					if (delta > 0) {
+					// update the pointers on the database
+					if (dbRegisteredLastFetchedEventId != lastDispatchedEventId) {
 						fetched = true;
-						synchronized (this) {
-							notificationCount -= delta;
-						}
-						lastFetchedEventId = eventId;
-						dba.invokeUpdateProcedure(dba.UpdateLastFetchedEventId, LAST_FETCHED_EVENT_ID, lastFetchedEventId);
+						dbRegisteredLastFetchedEventId = lastDispatchedEventId;
+						dba.invokeUpdateProcedure(dba.UpdateLastFetchedEventId, LAST_FETCHED_EVENT_ID, dbRegisteredLastFetchedEventId);
 					}
 				} catch (Throwable t) {
 					log.reportThrowable(t, "Exception on ConsumerDispatcher thread");
@@ -136,16 +145,16 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 				// wait for a new element or proceed right away?
 				if (!fetched) {
 					synchronized (this) {
-						// use the internal notification mechanism to detect notifications even before we were waiting on them
-						if (notificationCount != 0) {
-							notificationCount -= Math.min(notificationCount, 1);	// prevents possible loops
+						// use the internal notification mechanism to detect new element insertions even before we were waiting on them
+						if (hasUnfetchedElements) {
 							continue;
 						} else {
-							log.reportDebug("No new element by now on queue '"+queueTableName+"'");
+							log.reportDebug("PostgreSQLQueueEventLink: No new elements by now on queue '"+queueTableName+"'. Waiting for" + (queuePoolingTime == 0 ? "ever" : " "+queuePoolingTime+"ms... or") + " until a new one arrives");
 							processing = false;
 							try {
 								wait(queuePoolingTime);
 							} catch (InterruptedException e) {}
+							log.reportDebug("PostgreSQLQueueEventLink: resume fetching...");
 							processing = true;
 						}
 					}
@@ -158,7 +167,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	
 	
 	private   final Instrumentation<?, ?>                                log;
-	private   final QueuesPostgreSQLAdapter                              dba;
+	protected final QueuesPostgreSQLAdapter                              dba;
 	private   final QueueEventLink<SERVICE_EVENTS_ENUMERATION>           localEventDispatchingQueue;
 	protected final String                                               queueTableName;
 	private   final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau;
@@ -197,7 +206,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		localEventDispatchingQueue.clientsAndListenerMethodInvokers = clientsAndListenerMethodInvokers;
 		
 		// start the consumers dispatch manager thread
-		cdThread = new ConsumerDispatcher(log, QUEUE_POOLING_TIME, eventsEnumeration, dba);
+		cdThread = new ConsumerDispatcher(log, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS, eventsEnumeration, dba);
 		cdThread.start();
 	}
 
@@ -209,7 +218,6 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	@Override
 	public int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event) {
 		
-		// TODO an optimization is possible for a single node (single machine) service: the quele element should be inserted on the database, but also on the ram Queue, if it has enough slots available. In this case, the lastConsumedEvent must be also set after inserting.
 		// TODO PostgreSQL have a LISTEN/NOTIFY command set which might bring some performance improvements -- it can be done with pgjdbc-ng driver http://blog.databasepatterns.com/2014/04/postgresql-nofify-websocket-spring-mvc.html but not with the usual JDBC implementation, since JDBC does not allow asynchronous notifications: https://jdbc.postgresql.org/documentation/80/listennotify.html 
 		
 		try {
@@ -219,9 +227,10 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			// notify the consumers dispatch manager
 			synchronized (cdThread) {
 				// inform the internal notification mechanism
-				cdThread.notificationCount++;
-//System.err.println("+"+cdThread.notificationCount);
-				cdThread.notify();
+				cdThread.hasUnfetchedElements = true;
+				if (cdThread.processing == false) {
+					cdThread.notify();
+				}
 			}
 			
 			return eventId;
@@ -243,17 +252,23 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			cdThread.notify();
 		}
 	}
+	
+	private void waitForConsumers() {
+		for (int i=0; (i<10) && cdThread.processing; i++) {
+			log.reportEvent(IE_WAITING_CONSUMERS);
+			try {Thread.sleep(1000);} catch (InterruptedException e) {}
+		}
+	}
 
 	@Override
 	public void unsetConsumer() {
-		// TODO: what would happen if we delete all consumers while there are still elements on the queue? Fix for this scenario
+		waitForConsumers();
 		localEventDispatchingQueue.unsetConsumer();
 		consumerMethodInvoker = localEventDispatchingQueue.consumerMethodInvoker;
 	}
 
 	public boolean hasPendingEvents() {
-//System.err.println("="+cdThread.notificationCount);
-		return cdThread.processing || ((cdThread.queuePoolingTime == 0) && (cdThread.notificationCount > 0));
+		return cdThread.processing || cdThread.hasUnfetchedElements;
 	}
 	
 	public void stop() {
@@ -262,10 +277,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			cdThread.stop  = true;
 			cdThread.notify();
 		}
-		for (int i=0; (i<10) && cdThread.processing; i++) {
-			log.reportEvent(IE_WAITING_CONSUMERS);
-			try {Thread.sleep(1000);} catch (InterruptedException e) {}
-		}
+		waitForConsumers();
 		if (cdThread.processing) {
 			log.reportEvent(IE_FORCING_CONSUMERS_SHUTDOWN);
 		}
@@ -286,11 +298,8 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	
 	/** for testing purposes only */
 	public void resetQueues() throws SQLException {
+		waitForConsumers();
 		dba.resetQueues();
-		synchronized (cdThread) {
-			cdThread.notificationCount = 0;
-			cdThread.notify();
-		}
 	}
 	
 }

@@ -1,16 +1,17 @@
 package mutua.events;
 
-import static org.junit.Assert.*;
-import static mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration.*;
+import static mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration.ANNOTATION_CLASSES;
+import static mutua.tests.MutuaEventsAdditionalEventLinksTestsConfiguration.PERFORMANCE_TESTS_LOAD_FACTOR;
+import static org.junit.Assert.fail;
 
 import java.sql.SQLException;
-import java.util.Hashtable;
+import java.util.HashMap;
+
+import org.junit.Test;
 
 import mutua.events.TestAdditionalEventServer.ETestAdditionalEventServices;
 import mutua.events.TestAdditionalEventServer.TestAdditionalEvent;
 import mutua.tests.DatabaseAlgorithmAnalysis;
-
-import org.junit.Test;
 
 
 /** <pre>
@@ -33,7 +34,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 
 	// prepares the test variables
 	private final MO[]                                           mos                     = new MO[totalNumberOfEntries];
-	private final Hashtable<String, String>                      receivedMOs             = new Hashtable<String, String>(totalNumberOfEntries+1, 1.0f);
+	private final HashMap<String, String>                        receivedMOs             = new HashMap<String, String>(totalNumberOfEntries+1, 1.0f);
 	private int                                                  observedNumberOfEntries = -1;
 	private final EventClient<ETestAdditionalEventServices>      eventClient;
 	final PostgreSQLQueueEventLink<ETestAdditionalEventServices> link;
