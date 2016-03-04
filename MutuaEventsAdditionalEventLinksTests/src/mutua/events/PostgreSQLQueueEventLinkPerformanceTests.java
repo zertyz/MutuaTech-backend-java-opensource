@@ -29,12 +29,12 @@ import mutua.tests.DatabaseAlgorithmAnalysis;
 public class PostgreSQLQueueEventLinkPerformanceTests {
 	
 	// algorithm settings
-	private static int numberOfThreads      = 4;
+	private static int numberOfThreads      = 8;
 	private static int totalNumberOfEntries = PERFORMANCE_TESTS_LOAD_FACTOR * 40000;	// please, be sure the division between this and 'numberOfThreads' is round
 
 	// prepares the test variables
 	private final MO[]                                           mos                     = new MO[totalNumberOfEntries];
-	private final HashMap<String, String>                        receivedMOs             = new HashMap<String, String>(totalNumberOfEntries+1, 1.0f);
+	private final HashMap<String, String>                        receivedMOs             = new HashMap<String, String>(totalNumberOfEntries+(totalNumberOfEntries/4)+4);
 	private int                                                  observedNumberOfEntries = -1;
 	private final EventClient<ETestAdditionalEventServices>      eventClient;
 	final PostgreSQLQueueEventLink<ETestAdditionalEventServices> link;
@@ -43,7 +43,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 	
 	public PostgreSQLQueueEventLinkPerformanceTests() throws SQLException {
 		for (int i=0; i<totalNumberOfEntries; i++) {
-			mos[i] = new MO(Integer.toString(912300000+i), "I whish I could be different for every object... " + Math.random());
+			mos[i] = new MO(Integer.toString(912300000+i), Long.toString(Math.round(Math.random()*1000)).intern());
 		}
 		eventClient = new EventClient<ETestAdditionalEventServices>() {
 			@TestAdditionalEvent(ETestAdditionalEventServices.MO_ARRIVED)
@@ -84,10 +84,17 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 					eventServer.setConsumer(eventClient);
 				} else if ((i == (inserts-1))) {
 					int c=0;
+					int lastObservedNumberOfEntries = -1;
 					while (observedNumberOfEntries != (totalNumberOfEntries / 2)) {
-						Thread.sleep(1);
-						c++;
-						if (c>100000) {
+						Thread.sleep(10);
+						if (lastObservedNumberOfEntries == observedNumberOfEntries) {
+							c++;
+						} else {
+							lastObservedNumberOfEntries = observedNumberOfEntries;
+							c = 0;
+						}
+						// if no new element are received within 10 seconds and we still didn't get the number we should have...
+						if (c>1000) {
 							System.err.println("It is in the records that "+(i+1)+" elements were inserted and that only "+observedNumberOfEntries+" were consumed. Our list contains "+receivedMOs.size()+" elements. Questions: 1) Is the insertion number right? 2) Is the consumption number right? 3) Did we consume 'til the end or we dropped someone along the way?");
 							System.err.print("Elements that are missing from our list: {");
 							for (int k=0; k<=i; k++) {
@@ -96,16 +103,23 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 								}
 							}
 							System.err.println("}\nNot all "+(totalNumberOfEntries / 2)+" (half) elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
-							Thread.sleep(10000);
+							fail("Missing elements detected");
 						}
 					}
 					eventServer.unsetConsumer();
 				} else if ((i == (totalNumberOfEntries-1))) {
 					int c=0;
+					int lastObservedNumberOfEntries = -1;
 					while (observedNumberOfEntries != totalNumberOfEntries) {
-						Thread.sleep(1);
-						c++;
-						if (c>100000) {
+						Thread.sleep(10);
+						if (lastObservedNumberOfEntries == observedNumberOfEntries) {
+							c++;
+						} else {
+							lastObservedNumberOfEntries = observedNumberOfEntries;
+							c = 0;
+						}
+						// if no new element are received within 10 seconds and we still didn't get the number we should have...
+						if (c>1000) {
 							System.err.println("It is in the records that "+(i+1)+" elements were inserted and that only "+observedNumberOfEntries+" were consumed. Our list contains "+receivedMOs.size()+" elements. Questions: 1) Is the insertion number right? 2) Is the consumption number right? 3) Did we consume 'til the end or we dropped someone along the way?");
 							System.err.print("Elements that are missing from our list: {");
 							for (int k=0; k<=i; k++) {
@@ -114,7 +128,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 								}
 							}
 							System.err.println("}\nNot all "+totalNumberOfEntries+" elements were consumed. Please verify if all of them were added. Press CTRL-C to abort and try again.");
-							Thread.sleep(10000);
+							fail("Missing elements detected");
 						}
 					}
 				}
@@ -129,7 +143,7 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 		final int inserts =  totalNumberOfEntries / 2;
 		
 		eventServer.setConsumer(eventClient);
-		new DatabaseAlgorithmAnalysis("PostgreSQLQueueEventLink Mixed Producers and Consumers", false, numberOfThreads, inserts, -1, -1) {
+		new DatabaseAlgorithmAnalysis("PostgreSQLQueueEventLink Mixed Producers and Consumers", false, numberOfThreads, inserts, -1, numberOfThreads) {
 			public void resetTables() throws SQLException {
 				link.resetQueues();
 				observedNumberOfEntries = 0;
@@ -138,25 +152,42 @@ public class PostgreSQLQueueEventLinkPerformanceTests {
 			public void insertLoopCode(int i) throws SQLException {
 				eventServer.addToMOQueue(mos[i]);
 			}
-		};
-
-		// checks
-		int c=0;
-		while (observedNumberOfEntries != totalNumberOfEntries) {
-			Thread.sleep(1);
-			c++;
-			if (c>10000) {
-				System.err.println("It is in the records that "+totalNumberOfEntries+" elements were inserted and that only "+observedNumberOfEntries+" were consumed. Our list contains "+receivedMOs.size()+" elements. Questions: 1) Is the insertion number right? 2) Is the consumption number right? 3) Did we consume 'til the end or we dropped someone along the way?");
-				System.err.print("Elements that are missing from our list: {");
-				for (int k=0; k<totalNumberOfEntries; k++) {
-					if (!receivedMOs.containsKey(mos[k].phone)) {
-						System.err.print(mos[k].phone+"(#"+k+"),");
+			
+			public void selectLoopCode(int i) throws InterruptedException {
+				// checks
+				int pass;
+				if (i == 0) {
+					pass = 1;
+				} else if (i == inserts) {
+					pass = 2;
+				} else {
+					return ;
+				}
+				int c=0;
+				int lastObservedNumberOfEntries = -1;
+				while (observedNumberOfEntries != (inserts*pass)) {
+					Thread.sleep(10);
+					if (lastObservedNumberOfEntries == observedNumberOfEntries) {
+						c++;
+					} else {
+						lastObservedNumberOfEntries = observedNumberOfEntries;
+						c = 0;
+					}
+					// if no new element are received within 10 seconds and we still didn't get the number we should have...
+					if (c>1000) {
+						System.err.println("It is in the records that "+inserts*pass+" elements were inserted and that only "+observedNumberOfEntries+" were consumed. Our list contains "+receivedMOs.size()+" elements. Questions: 1) Is the insertion number right? 2) Is the consumption number right? 3) Did we consume 'til the end or we dropped someone along the way?");
+						System.err.print("Elements that are missing from our list: {");
+						for (int k=0; k<inserts*pass; k++) {
+							if (!receivedMOs.containsKey(mos[k].phone)) {
+								System.err.print(mos[k].phone+"(#"+k+"),");
+							}
+						}
+						System.err.println("}\n");
+						fail("Reentrancy problem detected");
 					}
 				}
-				System.err.println("}\n");
-				fail("Reentrancy problem detected");
 			}
-		}
+		};
 		
 		eventServer.unsetConsumer();
 
