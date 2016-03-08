@@ -215,7 +215,7 @@ public class PostgreSQLQueueEventLinkTests {
 			eventServer.addToMOQueue(new MO(Long.toString(phone), "This is text number "+(phone-phoneStart)));
 			// delete from the queue
 			if (phone == phoneStart+1) {
-				AbstractPreparedProcedure insertAndDeleteElementCommand = new AbstractPreparedProcedure(
+				AbstractPreparedProcedure insertAndDeleteElementCommand = new AbstractPreparedProcedure(null,	// TODO refactor: an abstract procedure should be defined in the adapter configuration to access the connectionPool array
 						"INSERT INTO ",queueTableName,"(",queueElementFieldList,") VALUES(",queueElementFieldList.replaceAll("[A-Za-z_]+", "NOW()"),");",
 						"DELETE FROM ",queueTableName," WHERE eventId IN (SELECT MAX(eventId) FROM ",queueTableName,")");
 				link.dba.invokeUpdateProcedure(insertAndDeleteElementCommand);

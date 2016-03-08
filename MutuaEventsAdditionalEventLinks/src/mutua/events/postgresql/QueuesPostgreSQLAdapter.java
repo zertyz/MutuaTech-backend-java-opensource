@@ -205,21 +205,21 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		// statements
 		/////////////
 
-		ResetTables = new AbstractPreparedProcedure(
+		ResetTables = new AbstractPreparedProcedure(connectionPool,
 			"TRUNCATE ",queueTableName," CASCADE;",
 			"TRUNCATE ",queueTableName,"Fallback CASCADE;" +
 			"UPDATE ",queueTableName,"Head SET lastFetchedEventId=-1;");
-		InsertNewQueueElement = new AbstractPreparedProcedure(
+		InsertNewQueueElement = new AbstractPreparedProcedure(connectionPool,
 			"INSERT INTO ",queueTableName,"(",queueElementFieldList,") VALUES(",listObjects(parametersListForInsertNewQueueElementQuery, ", "),") RETURNING eventId");
-		UpdateLastFetchedEventId = new AbstractPreparedProcedure(
+		UpdateLastFetchedEventId = new AbstractPreparedProcedure(connectionPool,
 			"UPDATE ",queueTableName,"Head SET lastFetchedEventId=",QueueParameters.LAST_FETCHED_EVENT_ID);
-		FetchNextQueueElements = new AbstractPreparedProcedure(
+		FetchNextQueueElements = new AbstractPreparedProcedure(connectionPool,
 			"SELECT ",queueElementFieldList,", eventId FROM ",queueTableName," WHERE eventId > (SELECT lastFetchedEventId FROM ",
 			queueTableName,"Head) ORDER BY eventId ASC LIMIT ",queueNumberOfWorkerThreads);
-		InsertIntoFallbackQueue = new AbstractPreparedProcedure(
+		InsertIntoFallbackQueue = new AbstractPreparedProcedure(connectionPool,
 			"INSERT INTO ",queueTableName,"Fallback(eventId) SELECT eventId FROM ",queueTableName," WHERE ",
 			getWhereConditions(parametersListForInsertNewQueueElementQuery, queueElementFieldList, "=", " AND ")," ORDER BY eventId DESC LIMIT 1");
-		PopFallbackElements = new AbstractPreparedProcedure(
+		PopFallbackElements = new AbstractPreparedProcedure(connectionPool,
 			"DELETE FROM ",queueTableName,"Fallback RETURNING eventId");
 	}
 
