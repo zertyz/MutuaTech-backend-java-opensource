@@ -30,6 +30,7 @@ public class EventServer<SERVICE_EVENTS_ENUMERATION> {
 		link.reportListenableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
 	}
 	
+	/** @see IEventLink#reportConsumableEvent */
 	protected int dispatchConsumableEvent(SERVICE_EVENTS_ENUMERATION serviceId, Object... parameters) {
 		return link.reportConsumableEvent(new IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>(serviceId, parameters));
 	}

@@ -241,8 +241,6 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		}
 	}
 	
-	
-	
 	@Override
 	public void setConsumer(EventClient<SERVICE_EVENTS_ENUMERATION> consumerClient) throws IndirectMethodNotFoundException {
 		localEventDispatchingQueue.setConsumer(consumerClient);
