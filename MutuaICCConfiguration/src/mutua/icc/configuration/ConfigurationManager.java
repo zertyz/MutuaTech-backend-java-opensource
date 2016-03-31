@@ -103,13 +103,17 @@ public class ConfigurationManager {
 				long l = (Long)fValue;
 				buffer.append(fName).append("=").append(l).append("\n");
 			} else if (fType == String[].class) {
-				String[] ss = (String[])fValue;
-				for (String s : ss) {
-					s = s.replaceAll("\\\\", "\\\\\\\\").
-					      replaceAll("\n",   "\\\\n").
-					      replaceAll("\r",   "\\\\t").
-					      replaceAll("\t",   "\\\\t");
-					buffer.append(fName).append("+=").append(s).append("\n");
+				String[] ss = fValue != null ? (String[])fValue : new String[0];
+				if (ss.length == 0) {
+					buffer.append('#').append(fName).append("+=...\n");
+				} else {
+					for (String s : ss) {
+						s = s.replaceAll("\\\\", "\\\\\\\\").
+						      replaceAll("\n",   "\\\\n").
+						      replaceAll("\r",   "\\\\t").
+						      replaceAll("\t",   "\\\\t");
+						buffer.append(fName).append("+=").append(s).append("\n");
+					}
 				}
 			} else if (fType == boolean.class) {
 				boolean b = (Boolean)fValue;
@@ -128,12 +132,37 @@ public class ConfigurationManager {
 					buffer.append(enumConstant.toString());
 				}
 				buffer.append(")\n").append(fName).append('=').append(fValue.toString()).append('\n');
+			} else if (fType.isArray() && fType.getComponentType().isEnum()) {
+				// add to the comment line
+				buffer.deleteCharAt(buffer.length()-1);
+				buffer.append(" (possible values: ");
+				boolean isFirst = true;
+				Class<?> elementsType = fType.getComponentType();
+				for (Object enumConstant: elementsType.getEnumConstants()) {
+					if (isFirst) {
+						isFirst = false;
+					} else {
+						buffer.append(", ");
+					}
+					buffer.append(enumConstant.toString());
+				}
+				buffer.append(")\n");
+				// declaration
+				Enum<?>[] ee = fValue != null ? (Enum[])fValue : new Enum[0];
+				if (ee.length == 0) {
+					buffer.append('#').append(fName).append("+=...\n");
+				} else {
+					for (Enum<?> e : ee) {
+						buffer.append(fName).append("+=").append(e.name()).append("\n");
+					}
+				}
 			} else {
 				buffer.append("// don't know how to serialize field '").append(fName).
 				       append("', an instance of '").append(fType.getCanonicalName()).append("'");
 				for (Class<?> clazz : fType.getClasses()) {
 					buffer.append(", subclass of '").append(clazz.getCanonicalName()).append("'");
 				}
+				buffer.append('\n');
 			}
 		}
 		return buffer.toString();
