@@ -17,17 +17,20 @@ import java.util.ArrayList;
 
 public abstract class SplitRun extends Thread {
 
-	public static ArrayList<SplitRun> instances = new ArrayList<SplitRun>();
+	public static ArrayList<SplitRun>  instances  = new ArrayList<SplitRun>();
+	public static ArrayList<Throwable> exceptions = new ArrayList<Throwable>();
 	
 	public static void add(SplitRun instance) {
-		instances.add(instance);
+		instances .add(instance);
+		exceptions.add(null);
 	}
 	
 	private static void reset() {
-		instances.clear();
+		instances .clear();
+		exceptions.clear();
 	}
 	
-	public static void runAndWaitForAll() throws InterruptedException {
+	public static Throwable[] runAndWaitForAll() throws InterruptedException {
 
 		// run
 		for (SplitRun instance : instances) {
@@ -43,8 +46,13 @@ public abstract class SplitRun extends Thread {
 			}
 		}
 		
+		Throwable[] exceptionsArray = exceptions.toArray(new Throwable[exceptions.size()]);
+		
 		// prepare for the next use
 		reset();
+		
+		// returns the exceptions array. If there is a non-null element, then an exception happened while executing an instance
+		return exceptionsArray;
 	}
 	
 	private int arg;
@@ -63,6 +71,10 @@ public abstract class SplitRun extends Thread {
 			splitRun(arg);
 		} catch (Throwable t) {
 			t.printStackTrace();
+			// keep track of the exception
+			int i = instances.indexOf(this);
+			exceptions.set(i, t);
+
 		}
 		running = false;
 		synchronized (this) {
