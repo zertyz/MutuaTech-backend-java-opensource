@@ -3,7 +3,6 @@ package mutua.events;
 import mutua.events.TestAdditionalEventServer.ETestAdditionalEventServices;
 import mutua.imi.IndirectMethodInvocationInfo;
 import adapters.IJDBCAdapterParameterDefinition;
-import adapters.exceptions.PreparedProcedureException;
 
 /** <pre>
  * SpecializedMOQueueDataBureau.java
@@ -31,7 +30,7 @@ public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETest
 	}
 	
 	@Override
-	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestAdditionalEventServices> entry) throws PreparedProcedureException {
+	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestAdditionalEventServices> entry) {
 		MO mo = (MO)entry.getParameters()[0];
 		return new Object[] {
 			SpecializedMOParameters.PHONE, mo.phone,

@@ -3,7 +3,6 @@ package mutua.events;
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
 import mutua.imi.IndirectMethodInvocationInfo;
 import adapters.IJDBCAdapterParameterDefinition;
-import adapters.exceptions.PreparedProcedureException;
 
 /** <pre>
  * IDatabaseQueueDataBureau.java
@@ -22,7 +21,7 @@ public abstract class IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> {
 	/** Returns the array of parameter values from 'entry' that will be used to insert a queue
 	 * element on the database via {@link QueuesPostgreSQLAdapter#InsertNewQueueElement}.
 	 *  The Object[] must return the pairs parameter/value for the parameters enumerated by {@link #getParametersListForInsertNewQueueElementQuery()} */
-	public abstract Object[] serializeQueueEntry(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> entry) throws PreparedProcedureException;
+	public abstract Object[] serializeQueueEntry(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> entry);
 	
 	/** Receives 'databaseRow' (the return of the query 'FetchNextQueueElements') and returns the original queue 'entry' with the 'eventId' */
 	public abstract IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> deserializeQueueEntry(int eventId, Object[] databaseRow);

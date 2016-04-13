@@ -15,7 +15,6 @@ import org.junit.Test;
 
 import adapters.AbstractPreparedProcedure;
 import adapters.IJDBCAdapterParameterDefinition;
-import adapters.exceptions.PreparedProcedureException;
 
 /** <pre>
  * PostgreSQLQueueEventLinkTests.java
@@ -286,7 +285,7 @@ class GenericQueueDataBureau extends IDatabaseQueueDataBureau<ETestAdditionalEve
 	}
 	
 	@Override
-	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestAdditionalEventServices> entry) throws PreparedProcedureException {
+	public Object[] serializeQueueEntry(IndirectMethodInvocationInfo<ETestAdditionalEventServices> entry) {
 		StringBuffer serializedParameters = new StringBuffer();
 		serializedParameters.append('{');
 		for (Object parameter : entry.getParameters()) {

@@ -81,8 +81,28 @@ public abstract class IEventLink<SERVICE_EVENTS_ENUMERATION> {
 	 *  Returns the 'eventId' or -1, if not applicable */
 	public abstract int reportListenableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
 	
+	/** Similar to {@link #reportListenableEvent}, but works for a set of events. Extending classes are encouraged to override this method if
+	 *  there is an opportunity to make it more efficient than the original implementation. */
+	public int[] reportListenableEvents(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>... events) {
+		int[] eventIds = new int[events.length];
+		for (int i=0; i<events.length; i++) {
+			eventIds[i] = reportListenableEvent(events[i]);
+		}
+		return eventIds;
+	}
+
 	/** Takes actions to notify the appropriate 'Consumer' method of one of the client's that an event happened,
 	 *  returning the 'eventId' (or -1 if not applicable) */
 	public abstract int reportConsumableEvent(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event);
+	
+	/** Similar to {@link #reportConsumableEvent}, but works for a set of events. Extending classes are encouraged to override this method if
+	 *  there is an opportunity to make it more efficient than the original implementation. */
+	public int[] reportConsumableEvents(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>... events) {
+		int[] eventIds = new int[events.length];
+		for (int i=0; i<events.length; i++) {
+			eventIds[i] = reportConsumableEvent(events[i]);
+		}
+		return eventIds;
+	}
 	
 }

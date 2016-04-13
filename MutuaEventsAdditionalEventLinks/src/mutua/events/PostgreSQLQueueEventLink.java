@@ -242,6 +242,39 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	}
 	
 	@Override
+	public int[] reportConsumableEvents(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION>... events) {
+		// construct the parameters array
+		Object[][] rowParametersSet = new Object[events.length][];
+		for (int i=0; i<events.length; i++) {
+			Object[] rowParameters = dataBureau.serializeQueueEntry(events[i]);
+			rowParametersSet[i] = rowParameters;
+		}
+		// batch insert into the queue
+		try {
+			int[] updatedRows = dba.invokeUpdateBatchProcedure(dba.BatchInsertNewQueueElement, rowParametersSet);
+			// notify the consumers dispatch manager
+			synchronized (cdThread) {
+				// inform the internal notification mechanism
+				cdThread.hasUnfetchedElements = true;
+				if (cdThread.processing == false) {
+					cdThread.notify();
+				}
+			}
+			return updatedRows;
+		} catch (Throwable t) {
+			log.reportThrowable(t, "Error while attempting to batch insert PostgreSQL queue elements");
+			if (t instanceof SQLException) {
+				int c = 2;
+				SQLException e = (SQLException)t;
+				while ((e = e.getNextException()) != null) {
+					log.reportThrowable(e, "getNextException #"+(c++));
+				}
+			}
+			return null;
+		}
+	}
+	
+	@Override
 	public void setConsumer(EventClient<SERVICE_EVENTS_ENUMERATION> consumerClient) throws IndirectMethodNotFoundException {
 		localEventDispatchingQueue.setConsumer(consumerClient);
 		consumerMethodInvoker = localEventDispatchingQueue.consumerMethodInvoker;

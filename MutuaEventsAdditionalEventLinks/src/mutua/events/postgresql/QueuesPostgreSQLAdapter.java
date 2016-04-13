@@ -176,6 +176,8 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	
 	/** Drop all tables associated with 'queueTable', for testing purposes only */
 	public final AbstractPreparedProcedure ResetTables;
+	/** Insert statement able to be executed in batch, based on {@link #InsertNewQueueElement} */
+	public final AbstractPreparedProcedure BatchInsertNewQueueElement;
 	/** Inserts a row consisting of 'valuesExpressionForInsertNewQueueElementQuery' on the 'queueTable', returning the assigned 'eventId' */
 	public final AbstractPreparedProcedure InsertNewQueueElement;
 	/** Tells the queue that the head should be moved to {@link QueueParameters#LAST_FETCHED_EVENT_ID} */
@@ -211,6 +213,8 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 			"UPDATE ",queueTableName,"Head SET lastFetchedEventId=-1;");
 		InsertNewQueueElement = new AbstractPreparedProcedure(connectionPool,
 			"INSERT INTO ",queueTableName,"(",queueElementFieldList,") VALUES(",listObjects(parametersListForInsertNewQueueElementQuery, ", "),") RETURNING eventId");
+		BatchInsertNewQueueElement = new AbstractPreparedProcedure(connectionPool,
+			"INSERT INTO ",queueTableName,"(",queueElementFieldList,") VALUES(",listObjects(parametersListForInsertNewQueueElementQuery, ", "),")");
 		UpdateLastFetchedEventId = new AbstractPreparedProcedure(connectionPool,
 			"UPDATE ",queueTableName,"Head SET lastFetchedEventId=",QueueParameters.LAST_FETCHED_EVENT_ID);
 		FetchNextQueueElements = new AbstractPreparedProcedure(connectionPool,

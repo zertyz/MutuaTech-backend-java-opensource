@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
 import mutua.icc.configuration.annotations.ConfigurableElement;
@@ -45,6 +46,12 @@ public class ConfigurationManager {
 		StringBuffer buffer = new StringBuffer();
 		Field[] fields = configurableClass.getDeclaredFields();
 		for (Field f : fields) {
+			
+			// proceed only for static fields
+			if (!Modifier.isStatic(f.getModifiers())) {
+				continue;
+			}
+
 			ConfigurableElement configurableAnnotation = f.getAnnotation(ConfigurableElement.class);
 			if (configurableAnnotation == null) {
 				continue;
@@ -178,8 +185,12 @@ public class ConfigurationManager {
 		return buffer.toString();
 	}
 	
-	private void logFieldNotPresentOnConfiguration(String type, Field f) throws IllegalArgumentException, IllegalAccessException {
-		log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is not present on configuration. Using default value of '"+f.get(null)+"'");
+	private void logFieldNotPresentOnConfiguration(String type, Field f) {
+		try {
+			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is not present on configuration. Using default value of '"+f.get(null)+"'");
+		} catch (Throwable t) {
+			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is neither present on configuration nor has a default value (or it is inaccessable)");
+		}
 	}
 	
 	private void logScalarFieldDeclaredAsVector(Field f, String[] values) {
@@ -218,6 +229,12 @@ public class ConfigurationManager {
 		// load the pertinent fields
 		Field[] fields = configurableClass.getDeclaredFields();
 		for (Field f : fields) try {
+			
+			// proceed only for static fields
+			if (!Modifier.isStatic(f.getModifiers())) {
+				continue;
+			}
+			
 			String fName   = f.getName();
 			Class<?> fType = f.getType();
 			if (fType == String.class) try {
@@ -271,7 +288,7 @@ public class ConfigurationManager {
 				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Value '"+e+"' is not recognized as a valid value for Enum '"+fType.getCanonicalName()+"'");
 			} catch (NoSuchFieldException e) {
 			} else {
-				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Don't know how to desserialize type '"+fType.getCanonicalName()+"'");
+				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Don't know how to desserialize type '"+fType.getCanonicalName()+"' for field '"+f.getName()+"'");
 			}
 		} catch (NumberFormatException e) {
 			log.reportThrowable(e, "Error while attempt to configure field '"+f.getName()+"'");
