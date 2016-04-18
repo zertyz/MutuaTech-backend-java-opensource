@@ -1,13 +1,13 @@
 package mutua.icc.instrumentation.pour.console;
 
+import java.lang.reflect.Method;
+
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
-import mutua.icc.instrumentation.pour.SerializationRules;
-import mutua.serialization.ISerializationRule;
 import mutua.serialization.SerializationRepository;
 
 /** <pre>
@@ -24,21 +24,16 @@ import mutua.serialization.SerializationRepository;
 
 public class InstrumentationPour implements IInstrumentationPour, InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> {
 
-	private StringBuffer logLine = new StringBuffer();
+	private StringBuffer logLine;
+	private Method       instrumentationEventDtoSerializationMethod;
 	
-	private ISerializationRule<InstrumentationEventDto> logEventDtoSerializationRule;
-	private SerializationRepository serializer;
-
 	public InstrumentationPour(IInstrumentableProperty[] instrumentationProperties) {
-		serializer = new SerializationRepository(instrumentationProperties);
-		logEventDtoSerializationRule = new SerializationRules(serializer);
-		serializer.addSerializationRule(logEventDtoSerializationRule);
+		logLine = new StringBuffer();
+		instrumentationEventDtoSerializationMethod = SerializationRepository.getSerializationMethod(InstrumentationEventDto.class);
 	}
 
 	@Override
-	public void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties) {
-		serializer.addSerializationRules(instrumentableProperties);
-	}
+	public void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties) {}
 
 	@Override
 	public void reset() {}
@@ -49,10 +44,15 @@ public class InstrumentationPour implements IInstrumentationPour, Instrumentatio
 	public void storeInstrumentableEvent(InstrumentationEventDto event) {
 		String l;
 		synchronized (logLine) {
-			logLine.setLength(0);
-			serializer.serialize(logLine, event);
-			l = logLine.toString();
+			try {
+				logLine.setLength(0);
+				SerializationRepository.invokeSerializationMethod(instrumentationEventDtoSerializationMethod, logLine, event);
+			} catch (Throwable t) {
+				t.printStackTrace(System.out);
+				logLine.append("### Exception while invoking serialization method '"+instrumentationEventDtoSerializationMethod+"': ").append(t.toString());
+			}
 		}
+		l = logLine.toString();
 		System.out.println(l);
 	}
 

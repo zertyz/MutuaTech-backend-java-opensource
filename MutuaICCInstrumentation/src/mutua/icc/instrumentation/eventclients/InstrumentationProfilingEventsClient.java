@@ -1,6 +1,7 @@
 package mutua.icc.instrumentation.eventclients;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Hashtable;
 
 import mutua.icc.instrumentation.IInstrumentableEvent;
@@ -13,6 +14,7 @@ import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
 import mutua.icc.instrumentation.pour.PourFactory;
 import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
+import mutua.serialization.SerializationRepository;
 
 /** <pre>
  * InstrumentationProfilingEventsClient.java
@@ -114,15 +116,13 @@ enum EProfileInstrumentationProperties implements IInstrumentableProperty {
 	////////////////////////////////////
 	
 	@Override
-	public Class<?> getType() {
+	public Class<?> getInstrumentationPropertyType() {
 		return instrumentationPropertyType;
 	}
 
 	@Override
-	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
-                                   "' didn't overrode 'appendSerializedValue' from " +
-                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	public Method getTextualSerializationMethod() {
+		return SerializationRepository.getSerializationMethod(instrumentationPropertyType);
 	}
 
 }

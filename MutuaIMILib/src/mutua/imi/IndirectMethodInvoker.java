@@ -95,8 +95,8 @@ public class IndirectMethodInvoker<METHOD_ID_TYPE> {
 			throw new IndirectMethodNotFoundException(this, invocationInfo);
 		} else try {
 			return m.invoke(methodsClassInstance, invocationInfo.getParameters());
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		} catch (Throwable t) {
+			throw new RuntimeException("Error invoking method '"+invocationInfo.toString()+"'", t);
 		}
 	}
 	

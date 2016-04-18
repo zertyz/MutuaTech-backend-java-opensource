@@ -3,14 +3,13 @@ package mutua.icc.instrumentation.pour.rotatingfile;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
 import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.icc.instrumentation.pour.IInstrumentationPour;
-import mutua.icc.instrumentation.pour.SerializationRules;
-import mutua.serialization.ISerializationRule;
 import mutua.serialization.SerializationRepository;
 
 /** <pre>
@@ -27,22 +26,18 @@ import mutua.serialization.SerializationRepository;
 
 public class InstrumentationPour implements IInstrumentationPour {
 
-	private ISerializationRule<InstrumentationEventDto> logEventDtoSerializationRule;
-	private SerializationRepository serializer;
 	private FileOutputStream fout;
-	private StringBuffer logLine = new StringBuffer();
+	private StringBuffer     logLine;
+	private Method           instrumentationEventDtoSerializationMethod;
+
 
 	public InstrumentationPour(IInstrumentableProperty[] instrumentationProperties, String logFileName) throws FileNotFoundException {
-		serializer = new SerializationRepository(instrumentationProperties);
-		logEventDtoSerializationRule = new SerializationRules(serializer);
-		serializer.addSerializationRule(logEventDtoSerializationRule);
-		fout = new FileOutputStream(logFileName, true);
+		logLine = new StringBuffer();
+		fout    = new FileOutputStream(logFileName, true);
 	}
 
 	@Override
-	public void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties) {
-		serializer.addSerializationRules(instrumentableProperties);
-	}
+	public void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties) {}
 
 	@Override
 	public void reset() {}
@@ -53,10 +48,14 @@ public class InstrumentationPour implements IInstrumentationPour {
 	public void storeInstrumentableEvent(InstrumentationEventDto event) throws IOException {
 		String l;
 		synchronized (logLine) {
-			logLine.setLength(0);
-			serializer.serialize(logLine, event);
-			logLine.append('\n');
-			l = logLine.toString();
+			try {
+				logLine.setLength(0);
+				SerializationRepository.invokeSerializationMethod(instrumentationEventDtoSerializationMethod, logLine, event);
+				logLine.append('\n');
+				l = logLine.toString();
+			} catch (Throwable t) {
+				l = t.toString();
+			}
 		}
 		fout.write(l.getBytes());
 	}

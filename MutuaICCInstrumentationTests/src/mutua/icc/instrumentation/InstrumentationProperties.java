@@ -1,6 +1,9 @@
 package mutua.icc.instrumentation;
 
-import mutua.serialization.ISerializationRule;
+import java.lang.reflect.Method;
+
+import mutua.serialization.SerializationRepository;
+import mutua.serialization.SerializationRepository.EfficientTextualSerializationMethod;
 
 /** <pre>
  * InstrumentationProperties.java
@@ -18,15 +21,16 @@ public enum InstrumentationProperties implements IInstrumentableProperty {
 	
 	
 	DAY_OF_WEEK("dayOfWeek", String.class),
+	MAIL       ("mail",      TestType.class),
 	
-	MAIL("mail", TestType.class) {
-		@Override
-		public void appendSerializedValue(StringBuffer logLine, Object value) {
-			TestType mail = (TestType)value;
-			logLine.append("from='").append(mail.from).append("',").
-			append("to='").append(mail.to).append("'");
+	ARBITRARY_TOSTRING_METHOD("My own toString of an Object[]") {
+		// code based on 'AbstractPreparedProcedure#buildPreparedStatement'
+		@EfficientTextualSerializationMethod
+		public void toString(StringBuffer buffer) {
+			Object[] myObjectArrayData = (Object[])(Object)this;
+			buffer.append("My own toString worked!");
 		}
-	}
+	},
 
 	
 	;
@@ -40,6 +44,11 @@ public enum InstrumentationProperties implements IInstrumentableProperty {
 		this.instrumentationPropertyName = instrumentationPropertyName;
 		this.instrumentationPropertyType = instrumentationPropertyType;
 	}
+	
+	private InstrumentationProperties(String instrumentationPropertyName) {
+		this.instrumentationPropertyName = instrumentationPropertyName;
+		this.instrumentationPropertyType = this.getClass();
+	}
 
 	
 	// IInstrumentableProperty implementation
@@ -50,20 +59,13 @@ public enum InstrumentationProperties implements IInstrumentableProperty {
 		return instrumentationPropertyName;
 	}
 
-	
-	// ISerializationRule implementation
-	////////////////////////////////////
-	
 	@Override
-	public Class<?> getType() {
+	public Class<?> getInstrumentationPropertyType() {
 		return instrumentationPropertyType;
 	}
 
 	@Override
-	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
-                                   "' didn't overrode 'appendSerializedValue' from " +
-                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	public Method getTextualSerializationMethod() {
+		return SerializationRepository.getSerializationMethod(instrumentationPropertyType);
 	}
-
 }

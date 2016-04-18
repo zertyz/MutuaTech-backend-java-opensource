@@ -1,5 +1,7 @@
 package mutua.icc.instrumentation;
 
+import java.lang.reflect.Method;
+
 /** <pre>
  * InstrumentationTestRequestProperty.java
  * =======================================
@@ -22,13 +24,13 @@ public class InstrumentationTestRequestProperty implements IInstrumentableProper
 	}
 
 	@Override
-	public Class<?> getType() {
-		return String.class;
+	public Class<?> getInstrumentationPropertyType() {
+		return String[].class;
 	}
 
 	@Override
-	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("This serialization rule should not have been called since 'type' is a string");
+	public Method getTextualSerializationMethod() {
+		return null;
 	}
 
 }

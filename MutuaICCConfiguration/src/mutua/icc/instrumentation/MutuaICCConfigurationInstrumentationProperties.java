@@ -1,5 +1,8 @@
 package mutua.icc.instrumentation;
 
+import java.lang.reflect.Method;
+
+import mutua.serialization.SerializationRepository;
 
 /** <pre>
  * MutuaICCConfigurationInstrumentationProperties.java
@@ -20,13 +23,7 @@ public enum MutuaICCConfigurationInstrumentationProperties implements IInstrumen
 	////////////////
 	
 	IP_FILE_NAME ("file", String.class),
-	IP_CLASS     ("class", Class.class) {
-		@Override
-		public void appendSerializedValue(StringBuffer buffer, Object value) {
-			Class<?> clazz = (Class<?>)value;
-			buffer.append("'").append(clazz.getCanonicalName()).append("'");
-		}
-	},
+	IP_CLASS     ("class", Class.class),
 	
 
 	// field setting
@@ -72,15 +69,13 @@ public enum MutuaICCConfigurationInstrumentationProperties implements IInstrumen
 	////////////////////////////////////
 	
 	@Override
-	public Class<?> getType() {
+	public Class<?> getInstrumentationPropertyType() {
 		return instrumentationPropertyType;
 	}
 
 	@Override
-	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
-                                   "' didn't overrode 'appendSerializedValue' from " +
-                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	public Method getTextualSerializationMethod() {
+		return SerializationRepository.getSerializationMethod(instrumentationPropertyType);
 	}
 
 }

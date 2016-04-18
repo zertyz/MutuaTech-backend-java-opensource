@@ -1,7 +1,7 @@
 package mutua.icc.configuration;
 
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,9 +22,8 @@ import java.util.regex.Pattern;
 public class ConfigurationParser {
 	
 	
-	private Hashtable<String, ArrayList<String>> keyToValuesMap;	// := {key1={value1, value2, ...}, ...}
-	private ArrayList<String> orderedKeys;	// so we can provide the keys in the order they appear on the configuration file
-	private ArrayList<Object[]> errorLines;	// := {{line_number, line_contents}, ...}
+	private LinkedHashMap<String, ArrayList<String>> keyToValuesMap;	// := {key1={value1, value2, ...}, ...}, retrievable by the insertion order
+	private ArrayList<Object[]> errorLines;								// := {{line_number, line_contents}, ...}
 	
 	
 	/** g'ol'gsub like function */
@@ -64,7 +63,6 @@ public class ConfigurationParser {
 				} else {
 					values = new ArrayList<String>();
 					keyToValuesMap.put(key, values);
-					orderedKeys.add(key);
 				}
 				values.add(value);
 				continue;
@@ -77,7 +75,6 @@ public class ConfigurationParser {
 				ArrayList<String> values = new ArrayList<String>();
 				values.add(value);
 				keyToValuesMap.put(key, values);
-				orderedKeys.add(key);
 				continue;
 			}
 			// so this is an invalid line. report.
@@ -87,14 +84,13 @@ public class ConfigurationParser {
 
 	/** instantiate this class and make it ready to provide information about the 'configurationContents' provided */
 	public ConfigurationParser(String configurationContents) {
-		keyToValuesMap = new Hashtable<String, ArrayList<String>>();
-		orderedKeys    = new ArrayList<String>();
+		keyToValuesMap = new LinkedHashMap<String, ArrayList<String>>();
 		errorLines     = new ArrayList<Object[]>();
 		parse(configurationContents);
 	}
 
 	public String[] getKeys() {
-		return orderedKeys.toArray(new String[] {});
+		return keyToValuesMap.keySet().toArray(new String[] {});
 	}
 	
 	public String[] getValues(String key) {

@@ -1,104 +1,268 @@
 package mutua.serialization;
 
-import java.util.Hashtable;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Writer;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** <pre>
  * SerializationRepository.java
  * ============================
  * (created by luiz, Jan 24, 2015)
  *
- * Aglomerates serialization rules and perform serializations on them
+ * High efficiency Serialization / Deserialization class.
  *
- * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
 
+// TODO 14/4/16: Refactoring de Serialization. Passos:
+//1) Apenas provê métodos para serializar/deserializar -- todos estáticos
+//2) Há um método concentrador que recebe um Object. Se for de um tipo conhecido, chama um dos métodos existentes. Se for de um tipo desconhecido, tentar chamar o toString(StringBuffer) e depois o toString(), alertando que este método é ineficiente
+//3) Há um outro chamado getSerializationMethod, que recebe um Object e retorna um Method pronto para receber como argumentos: 1) o Object e 2) O String Buffer. O método para serializar eficientemente deve, então, se dar através da chamada deste method -- feita através de mais um: callSerializationMethod(Method, Object, StringBuffer)
+
 public class SerializationRepository {
-
-	// TODO use a hashmap for performance
-	private Hashtable<Class<?>, ISerializationRule<?>> typeToSerializationRuleMap;
 	
-	public SerializationRepository(Class<?>... serializationRulesEnumerations) {
-		typeToSerializationRuleMap = new Hashtable<Class<?>, ISerializationRule<?>>();
-		for (Class<?> serializationRulesEnumeration : serializationRulesEnumerations) {
-			addSerializationRules(serializationRulesEnumeration);
-		}
-	}
-
-	public void addSerializationRules(Class<?> serializationRulesEnumeration) {
-		Object[] rules = serializationRulesEnumeration.getEnumConstants();
-		for (Object rule : rules) {
-			addSerializationRule((ISerializationRule<?>)rule);
-		}
-	}
+	/** Annotation to be used by 'public void toString(StringBuffer buffer)' methods to document and denote they follow the {@link SerializationRepository} requisites for such a method */
+	@Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD) public @interface EfficientTextualSerializationMethod {}
 	
-	public SerializationRepository(ISerializationRule<?>[] serializationRules) {
-		typeToSerializationRuleMap = new Hashtable<Class<?>, ISerializationRule<?>>();
-		addSerializationRules(serializationRules);
-	}
+	private static final Pattern stringSerializationPattern   = Pattern.compile("([\\\\\n\r\t])");
+	private static final Pattern stringDeserializationPattern = Pattern.compile("(\\\\[\\\\nrt])");
 	
-	public void addSerializationRules(ISerializationRule<?>[] serializationRules) {
-		for (ISerializationRule<?> serializationRule : serializationRules) {
-			addSerializationRule(serializationRule);
+	/** Efficiently serializes a string, so that it can be used on text files (and later reverted by {@link #deserialize(String)}) */
+	public static StringBuffer serialize(StringBuffer buffer, String subject) {
+		if (subject == null) {
+			buffer.append("NULL");
+			return buffer;
 		}
-	}
-	
-	public void addSerializationRule(ISerializationRule<?> serializationRule) {
-		Class<?> serializationType = serializationRule.getType();
-		typeToSerializationRuleMap.put(serializationType, serializationRule);
-	}
-
-	private static String[][] stringEscapeSequences = {
-		{"\\\\", "\\\\\\\\"},
-		{"\n",   "\\\\n"},
-		{"\r",   "\\\\r"},
-		{"\t",   "\\\\t"},
-	};
-	public void serialize(StringBuffer buffer, Object instance) {
-		if (instance == null) {
-			buffer.append("null");
-		} else {
-			Class<?> instanceType = instance.getClass();
-			serialize(buffer, instance, instanceType);
-		}
-	}
-
-	private void serialize(StringBuffer buffer, Object instance, Class<?> instanceType) {
-		if (instanceType == String.class) {
-			String s = (String)instance;
-			for (int i=0; i<stringEscapeSequences.length; i++) {
-				s = s.replaceAll(stringEscapeSequences[i][0], stringEscapeSequences[i][1]);
+		Matcher m = stringSerializationPattern.matcher(subject);
+		while (m.find()) {
+			char toEscape = m.group(1).charAt(0);
+			switch (toEscape) {
+			case '\\':
+				m.appendReplacement(buffer, "\\\\\\\\");
+				break;
+			case '\n':
+				m.appendReplacement(buffer, "\\\\n");
+				break;
+			case '\r':
+				m.appendReplacement(buffer, "\\\\r");
+				break;
+			case '\t':
+				m.appendReplacement(buffer, "\\\\t");
+				break;
+			default:
+				m.appendReplacement(buffer, Matcher.quoteReplacement(String.valueOf(toEscape)));
 			}
-			buffer.append(s);
-		} else if (instanceType == String[].class) {
-			String[] ss = (String[])instance;
-			for (int i=0; i<ss.length; i++) {
-				buffer.append('"');
-				serialize(buffer, ss[i], String.class);
-				buffer.append('"');
-				if (i < ss.length-1) {
+		}
+		m.appendTail(buffer);
+		
+		return buffer;
+	}
+	
+	/** Efficiently serializes a string array */
+	public static StringBuffer serialize(StringBuffer buffer, String[] stringArray) {
+		if (stringArray == null) {
+			buffer.append("NULL");
+			return buffer;
+		}
+		buffer.append('{');
+		for (int i=0; i<stringArray.length; i++) {
+			if (i > 0) {
+				buffer.append(',');
+			}
+			buffer.append('"');
+			serialize(buffer, stringArray[i]);
+			buffer.append('"');
+		}
+		buffer.append('}');
+		return buffer;
+	}
+	
+	/** Efficiently serializes a 2D string array */
+	public static StringBuffer serialize(StringBuffer buffer, String[][] string2DArray) {
+		if (string2DArray == null) {
+			buffer.append("NULL");
+			return buffer;
+		}
+		buffer.append('{');
+		for (int i=0; i<string2DArray.length; i++) {
+			if (i > 0) {
+				buffer.append(", ");
+			}
+			serialize(buffer, string2DArray[i]);
+		}
+		buffer.append('}');
+		return buffer;
+	}
+	
+	/** Efficiently serializes a <String, String> Map in JSON style*/
+	public static StringBuffer serialize(StringBuffer buffer, Map<String, String> map) {
+		if (map == null) {
+			buffer.append("NULL");
+			return buffer;
+		}
+		buffer.append('{');
+		for (String key : map.keySet()) {
+			buffer.append('\'');
+			serialize(buffer, key);
+			buffer.append("': ");
+			buffer.append('\'');
+			serialize(buffer, map.get(key));
+			buffer.append("',");
+		}
+		if (map.size() > 0) {
+			buffer.setLength(buffer.length()-1);	// remove the last comma
+		}
+		buffer.append('}');
+		return buffer;
+	}
+	
+	/** Efficiently serializes an array of objects */
+	public static StringBuffer serialize(StringBuffer buffer, Method serializationMethod, Object[] objects) {
+		if (objects == null) {
+			buffer.append("NULL");
+			return buffer;
+		}
+		try {
+			buffer.append('{');
+			for (int i=0; i<objects.length; i++) {
+				if (i > 0) {
 					buffer.append(',');
 				}
+				buffer.append('"');
+				invokeSerializationMethod(serializationMethod, buffer, objects[i]);
+				buffer.append('"');
 			}
-		} else if ((instanceType == Integer.TYPE) || (instanceType == Long.TYPE) ||
-		           (instanceType == Number.class) || (instanceType == Boolean.class) ||
-		           (instanceType == StringBuffer.class) || (instanceType == Enum.class)) {
-			buffer.append(instance);
+			buffer.append('}');
+			return buffer;
+		} catch (Throwable t) {
+			throw new RuntimeException("Exception while serializing an object array", t);
+		}
+	}
+	
+
+	
+	/** Inefficiently serializes an 'object' into a StringBuffer -- for an efficient serialization, use {@link #getSerializationMethod} or some of the 'serialize(<NativeType>)' methods */
+	public static StringBuffer serialize(StringBuffer buffer, Object object) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+		Class<?> type = object.getClass();
+		if (type == String.class) {
+			serialize(buffer, (String)object);
+		} else if (type == String[].class) {
+			serialize(buffer, (String[])object);
+		} else if (type == String[][].class) {
+			serialize(buffer, (String[][])object);
+		} else if ((type == Integer.TYPE)       || (type == Long.TYPE) ||
+		           (type == Number.class)       || (type == Boolean.class) ||
+		           (type == StringBuffer.class) || (type == Enum.class)) {
+			buffer.append(object);
 		} else {
-			ISerializationRule serializationRule = typeToSerializationRuleMap.get(instanceType);
-			if (serializationRule == null) {
-				// try a super type
-				Class<?> superType = instanceType.getSuperclass();
-				if (superType == Object.class) {
-					throw new RuntimeException("No serialization rule found to serialize type '" + instanceType + "'");
-				} else {
-					serialize(buffer, instance, superType);
-				}
+			// serializes a general purpose java object
+			Method method = getSerializationMethod(type);
+			invokeSerializationMethod(method, buffer, object);
+		}
+		
+		return buffer;
+	}
+	
+	/** Inefficiently serializes an array of objects into a StringBuffer -- for an efficient serialization, use {@link #serialize(StringBuffer, Method, Object[])} */
+	public static StringBuffer serialize(StringBuffer buffer, Object[] objects) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+		if (objects == null) {
+			buffer.append("NULL");
+			return buffer;
+		}
+		buffer.append('{');
+		for (int i=0; i<objects.length; i++) {
+			if (i > 0) {
+				buffer.append(',');
+			}
+			buffer.append('"');
+			serialize(buffer, objects[i]);
+			buffer.append('"');
+		}
+		buffer.append('}');
+		return buffer;
+	}
+	
+	/** Inefficiently serializes an 'object' into a String -- for an efficient serialization, use {@link #getSerializationMethod} or some of the 'serialize(<NativeType>)' methods */
+	public static String serialize(Object object) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+		return serialize(new StringBuffer(), object).toString();
+	}
+	
+	
+	public static Method getSerializationMethod(Class<?> type) throws SecurityException {
+		try { return type.getMethod("toString", StringBuffer.class); } catch (NoSuchMethodException t) {}
+		try { return type.getMethod("toString");                     } catch (NoSuchMethodException t) {}
+		throw new RuntimeException("Could not find a serialization method for '"+type.getName()+"'");
+	}
+	
+	public static void invokeSerializationMethod(Method m, final StringBuffer buffer, Object object) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+		if ((m != null) && (m.getReturnType() == Void.TYPE)) {
+			// call the pumped-up public void toString(StringBuffer buffer)
+			m.invoke(object, buffer);
+		} else {
+			// call specific methods for native types
+			if (object instanceof String) {
+				serialize(buffer, (String)object);
+			} else if (object instanceof String[]) {
+				serialize(buffer, (String[])object);
+			} else if (object instanceof Throwable) {
+				PrintWriter pw = new PrintWriter(new Writer() {
+					@Override
+					public void write(char[] cbuf, int off, int len) throws IOException {
+						serialize(buffer, new String(cbuf, off, len));
+					}
+					@Override
+					public void flush() throws IOException {}
+					@Override
+					public void close() throws IOException {}
+					
+				});
+				buffer.append('"');
+				((Throwable)object).printStackTrace(pw);
+				buffer.append('"');
+			} else if (object instanceof Class) {
+				buffer.append('\'').append(((Class<?>)object).getName()).append('\'');
 			} else {
-				serializationRule.appendSerializedValue(buffer, instance);
+				// call the original 'public String toString()'
+				buffer.append(m.invoke(object, (Object[])null));
 			}
 		}
+	}
+
+	/** Efficiently deserializes a string read from a human-readable text file (or produced by {@link #serialize(StringBuffer, String)}) */
+	public static String deserialize(String serializedSubject) {
+		StringBuffer buffer = new StringBuffer(serializedSubject.length());
+		Matcher m = stringDeserializationPattern.matcher(serializedSubject);
+		while (m.find()) {
+			char toUnescape = m.group(1).charAt(1);
+			switch (toUnescape) {
+			case '\\':
+				m.appendReplacement(buffer, "\\\\");
+				break;
+			case 'n':
+				m.appendReplacement(buffer, "\n");
+				break;
+			case 'r':
+				m.appendReplacement(buffer, "\r");
+				break;
+			case 't':
+				m.appendReplacement(buffer, "\t");
+				break;
+			default:
+				m.appendReplacement(buffer, String.valueOf(toUnescape));
+			}
+		}
+		m.appendTail(buffer);
+		return buffer.toString();
 	}
 
 }

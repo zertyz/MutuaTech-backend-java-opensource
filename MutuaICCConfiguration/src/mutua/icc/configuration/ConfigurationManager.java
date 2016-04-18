@@ -15,6 +15,7 @@ import java.util.Arrays;
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents;
+import mutua.serialization.SerializationRepository;
 
 /** <pre>
  * ConfigurationManager.java
@@ -96,35 +97,20 @@ public class ConfigurationManager {
 			String fName   = f.getName();
 			Object fValue  = f.get(null);
 			Class<?> fType = f.getType();
-			if (fType == String.class) {
-				String s = (String)fValue;
-				s = s.replaceAll("\\\\", "\\\\\\\\").
-				      replaceAll("\n",   "\\\\n").
-				      replaceAll("\r",   "\\\\t").
-				      replaceAll("\t",   "\\\\t");
-				buffer.append(fName).append("=").append(s).append("\n");
-			} else if (fType == int.class) {
-				int i = (Integer)fValue;
-				buffer.append(fName).append("=").append(i).append("\n");
-			} else if (fType == long.class) {
-				long l = (Long)fValue;
-				buffer.append(fName).append("=").append(l).append("\n");
+			if ((fType == int.class) || (fType == long.class) || (fType == double.class) || (fType == float.class) || (fType == short.class) || (fType == byte.class) || 
+			    (fType == boolean.class)) {
+				buffer.append(fName).append("=").append(fValue).append("\n");
+			} else if (fType == String.class) {
+					SerializationRepository.serialize(buffer.append(fName).append("="), (String)fValue).append("\n");
 			} else if (fType == String[].class) {
 				String[] ss = fValue != null ? (String[])fValue : new String[0];
 				if (ss.length == 0) {
 					buffer.append('#').append(fName).append("+=...\n");
 				} else {
 					for (String s : ss) {
-						s = s.replaceAll("\\\\", "\\\\\\\\").
-						      replaceAll("\n",   "\\\\n").
-						      replaceAll("\r",   "\\\\t").
-						      replaceAll("\t",   "\\\\t");
-						buffer.append(fName).append("+=").append(s).append("\n");
+						SerializationRepository.serialize(buffer.append(fName).append("+="), s).append("\n");
 					}
 				}
-			} else if (fType == boolean.class) {
-				boolean b = (Boolean)fValue;
-				buffer.append(fName).append("=").append(b).append("\n");
 			} else if (fType.isEnum()) {
 				// add to the comment line
 				buffer.deleteCharAt(buffer.length()-1);
@@ -185,7 +171,7 @@ public class ConfigurationManager {
 		return buffer.toString();
 	}
 	
-	private void logFieldNotPresentOnConfiguration(String type, Field f) {
+	private void reportThatFieldIsNotPresentOnConfiguration(String type, Field f) {
 		try {
 			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is not present on configuration. Using default value of '"+f.get(null)+"'");
 		} catch (Throwable t) {
@@ -202,7 +188,7 @@ public class ConfigurationManager {
 		String[] values = cp.getValues(fieldName);
 		// detect errors
 		if (values == null) {
-			logFieldNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
+			reportThatFieldIsNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
 		} else if ((values.length == 0) || (values.length > 1)) {
 			logScalarFieldDeclaredAsVector(f, values);
 		} else {
@@ -217,7 +203,7 @@ public class ConfigurationManager {
 		String[] values = cp.getValues(fieldName);
 		// detect errors
 		if (values == null) {
-			logFieldNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
+			reportThatFieldIsNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
 			throw new java.lang.NoSuchFieldException();
 		} else {
 			return values;
@@ -239,10 +225,7 @@ public class ConfigurationManager {
 			Class<?> fType = f.getType();
 			if (fType == String.class) try {
 				String s = requestScalarValue(f, cp);
-				s = s.replaceAll("\\\\n",   "\n").
-				      replaceAll("\\\\r",   "\t").
-				      replaceAll("\\\\t",   "\t").
-				      replaceAll("\\\\\\\\", "\\\\");
+				s = SerializationRepository.deserialize(s);
 				f.set(null, s);
 				log.reportEvent(IE_CONFIGURING_STRING_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_STRING_FIELD_VALUE, s);
 			} catch (NoSuchFieldException e) {
@@ -261,10 +244,7 @@ public class ConfigurationManager {
 			} else if (fType == String[].class) try {
 				String[] ss = requestVectorValue(f, cp);
 				for (int i=0; i<ss.length; i++) {
-					String s = ss[i].replaceAll("\\\\n",   "\n").
-					                 replaceAll("\\\\r",   "\t").
-					                 replaceAll("\\\\t",   "\t").
-					                 replaceAll("\\\\\\\\", "\\\\");
+					String s = SerializationRepository.deserialize(ss[i]);
 					ss[i] = s;
 				}
 				f.set(null, ss);

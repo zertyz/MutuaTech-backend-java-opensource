@@ -1,8 +1,14 @@
 package mutua.icc.instrumentation.dto;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.text.FieldPosition;
+import java.text.SimpleDateFormat;
 import java.util.Hashtable;
 import mutua.icc.instrumentation.IInstrumentableProperty;
 import mutua.icc.instrumentation.InstrumentableEvent;
+import mutua.serialization.SerializationRepository;
+import mutua.serialization.SerializationRepository.EfficientTextualSerializationMethod;
 
 /** <pre>
  * EventDto.java
@@ -84,5 +90,43 @@ public class InstrumentationEventDto {
 			throw new RuntimeException("Missing property value for property '"+property.getInstrumentationPropertyName()+"' on an instrumentation log line for event '"+getEvent().getName()+"'");
 		}
 	}
+	
+	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd|HH:mm:ss.SSS|zzz");
+	private static final FieldPosition    fp  = new FieldPosition(0);
+	@EfficientTextualSerializationMethod
+	public void toString(StringBuffer buffer) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+		IInstrumentableProperty[] instrumentableEventProperties = event.getProperties();
+		sdf.format(currentTimeMillis, buffer, fp);
+		buffer.append("|").append(currentTimeMillis).append(", ").
+		append(applicationName).append('-').append(threadInfo).append(": ").
+		append(event.getName());
+		if (instrumentableEventProperties.length > 0) {
+			buffer.append(" {");
+			for (int i=0; i<instrumentableEventProperties.length; i++) {
+
+				if (i > 0) {
+					buffer.append(", ");
+				}
+				
+				IInstrumentableProperty instrumentableProperty = instrumentableEventProperties[i];
+				buffer.append(instrumentableProperty.getInstrumentationPropertyName()).append(" = ");
+				Object logEventPropertyValue = getValue(instrumentableProperty);
+				
+				Class<?> type = instrumentableProperty.getInstrumentationPropertyType();
+				if ((type == Integer.TYPE) || (type == Long.TYPE) || (type == Double.TYPE) || (type == Float.TYPE) ||
+				    (type == Short.TYPE)   || (type == Byte.TYPE) || (type == Boolean.TYPE)) {
+					buffer.append(logEventPropertyValue);
+				} else if (type == String.class) {
+					SerializationRepository.serialize(buffer.append('"'), (String)logEventPropertyValue).append('"');
+				} else {
+					Method propertySerializationMethod = instrumentableProperty.getTextualSerializationMethod();
+					SerializationRepository.invokeSerializationMethod(propertySerializationMethod, buffer.append('{'), logEventPropertyValue);
+					buffer.append('}');
+				}
+			}
+			buffer.append("}");
+		}
+	}
+
 	
 }

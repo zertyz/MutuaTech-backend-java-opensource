@@ -1,5 +1,9 @@
 package mutua.icc.instrumentation;
 
+import java.lang.reflect.Method;
+
+import mutua.serialization.SerializationRepository;
+
 /** <pre>
  * MutuaEventAdditionalEventLinksInstrumentationProperties.java
  * ============================================================
@@ -46,21 +50,15 @@ public enum MutuaEventAdditionalEventLinksInstrumentationProperties implements I
 	public String getInstrumentationPropertyName() {
 		return instrumentationPropertyName;
 	}
-
-	
-	// ISerializationRule implementation
-	////////////////////////////////////
 	
 	@Override
-	public Class<?> getType() {
+	public Class<?> getInstrumentationPropertyType() {
 		return instrumentationPropertyType;
 	}
 
 	@Override
-	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
-                                   "' didn't overrode 'appendSerializedValue' from " +
-                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	public Method getTextualSerializationMethod() {
+		return SerializationRepository.getSerializationMethod(instrumentationPropertyType);
 	}
 
 }

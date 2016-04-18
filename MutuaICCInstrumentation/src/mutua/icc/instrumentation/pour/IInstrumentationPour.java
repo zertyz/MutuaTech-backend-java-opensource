@@ -22,7 +22,8 @@ import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsCli
 
 public interface IInstrumentationPour extends InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents> {
 	
-	/** Consider the additional 'IInstrumentableProperty's when serializing data */
+	/** Consider the additional 'IInstrumentableProperty's when serializing data
+	 *  TODO as of the Instrumentation Refactorings of 15/04/2016, this method seems not be needed anymore. May be refactored. */
 	public abstract void considerInstrumentableProperties(IInstrumentableProperty[] instrumentableProperties);
 	
 	/** Resets the database, for testing purposes */

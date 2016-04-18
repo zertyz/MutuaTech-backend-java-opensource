@@ -1,9 +1,6 @@
 package mutua.icc.instrumentation;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.Writer;
+import java.lang.reflect.Method;
 
 /** <pre>
  * DefaultInstrumentationProperties.java
@@ -20,28 +17,8 @@ import java.io.Writer;
 public enum DefaultInstrumentationProperties implements IInstrumentableProperty {
 
 	
-	DIP_MSG("msg", String.class),
-	
-	DIP_THROWABLE("stackTrace", Throwable.class) {
-		@Override
-		public void appendSerializedValue(final StringBuffer logLine, Object value) {
-			Throwable t = (Throwable)value;
-			PrintWriter pw = new PrintWriter(new Writer() {
-				@Override
-				public void write(char[] cbuf, int off, int len) throws IOException {
-					logLine.append(new String(cbuf, off, len).replaceAll("\n", "\\\\n").replaceAll("\t", "\\\\t"));
-				}
-				@Override
-				public void flush() throws IOException {}
-				@Override
-				public void close() throws IOException {}
-				
-			});
-			logLine.append('"');
-			t.printStackTrace(pw);
-			logLine.append('"');
-		}
-	},
+	DIP_MSG      ("msg",        String.class),
+	DIP_THROWABLE("stackTrace", Throwable.class),
 	
 	
 	;
@@ -70,15 +47,13 @@ public enum DefaultInstrumentationProperties implements IInstrumentableProperty 
 	////////////////////////////////////
 	
 	@Override
-	public Class<?> getType() {
+	public Class<?> getInstrumentationPropertyType() {
 		return instrumentationPropertyType;
 	}
 
 	@Override
-	public void appendSerializedValue(StringBuffer buffer, Object value) {
-		throw new RuntimeException("Serialization Rule '" + this.getClass().getName() +
-                                   "' didn't overrode 'appendSerializedValue' from " +
-                                   "'ISerializationRule' for type '" + instrumentationPropertyType);
+	public Method getTextualSerializationMethod() {
+		return null;
 	}
 
 }
