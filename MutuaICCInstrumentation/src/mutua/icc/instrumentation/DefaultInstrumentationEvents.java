@@ -31,11 +31,11 @@ public enum DefaultInstrumentationEvents implements IInstrumentableEvent {
 	
 	private InstrumentableEvent instrumentableEvent;
 	
-	private DefaultInstrumentationEvents(String name, IInstrumentableProperty property) {
+	private DefaultInstrumentationEvents(String name, InstrumentableProperty property) {
 		instrumentableEvent = new InstrumentableEvent(name, property);
 	}
 	
-	private DefaultInstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+	private DefaultInstrumentationEvents(String name, InstrumentableProperty property1, InstrumentableProperty property2) {
 		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
 	}
 	

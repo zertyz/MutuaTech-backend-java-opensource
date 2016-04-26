@@ -27,11 +27,11 @@ public enum InstrumentationEvents implements IInstrumentableEvent {
 	
 	private InstrumentableEvent instrumentableEvent;
 	
-	private InstrumentationEvents(String name, IInstrumentableProperty property) {
+	private InstrumentationEvents(String name, InstrumentableProperty property) {
 		instrumentableEvent = new InstrumentableEvent(name, property);
 	}
 	
-	private InstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+	private InstrumentationEvents(String name, InstrumentableProperty property1, InstrumentableProperty property2) {
 		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
 	}
 	

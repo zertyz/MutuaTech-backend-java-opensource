@@ -17,7 +17,7 @@ import mutua.serialization.SerializationRepository.EfficientTextualSerialization
  * @author luiz
  */
 
-public enum InstrumentationProperties implements IInstrumentableProperty {
+public enum InstrumentationProperties implements InstrumentableProperty {
 	
 	
 	DAY_OF_WEEK("dayOfWeek", String.class),

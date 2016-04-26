@@ -1,56 +1,28 @@
 package mutua.icc.instrumentation;
 
+import mutua.icc.instrumentation.handlers.IInstrumentationHandler;
 
 /** <pre>
  * InstrumentableEvent.java
  * ========================
- * (created by luiz, Jan 21, 2015)
+ * (created by luiz, Jan 24, 2015)
  *
- * Defines an instrumentable event
+ * This class defines an "Instrumentable Event", along with information on how it should behave
+ * when the event hits 
  *
- * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
 
-public class InstrumentableEvent implements IInstrumentableEvent {
+public class InstrumentableEvent {
 	
-	private final String name;
-	private final IInstrumentableProperty[] properties;
+	public final String                                     eventName;
+	public final Class<? extends IInstrumentationHandler>[] targetHandlers;
+	public final int                                        eventFlags;
 	
-	public InstrumentableEvent(String name, IInstrumentableProperty property) {
-		this.name       = name;
-		this.properties = new IInstrumentableProperty[] {property};
+	public InstrumentableEvent(String eventName, int eventFlags, Class<? extends IInstrumentationHandler>... targetHandlers) {
+		this.eventName      = eventName;
+		this.eventFlags     = eventFlags;
+		this.targetHandlers = targetHandlers;
 	}
-
-	public InstrumentableEvent(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
-		this.name       = name;
-		this.properties = new IInstrumentableProperty[] {property1, property2};
-	}
-
-	public InstrumentableEvent(String name, IInstrumentableProperty property1, IInstrumentableProperty property2, IInstrumentableProperty property3) {
-		this.name       = name;
-		this.properties = new IInstrumentableProperty[] {property1, property2, property3};
-	}
-
-	public InstrumentableEvent(String name) {
-		this.name       = name;
-		this.properties = new IInstrumentableProperty[] {};
-	}
-
-	/** The name of the event */
-	public String getName() {
-		return name;
-	}
-	
-	/** Properties that are related to this event */
-	public IInstrumentableProperty[] getProperties() {
-		return properties;
-	}
-
-	@Override
-	public InstrumentableEvent getInstrumentableEvent() {
-		return this;
-	}
-	
 }

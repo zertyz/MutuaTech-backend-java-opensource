@@ -4,6 +4,7 @@
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
 	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/MutuaSerializationLib"/>
 	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/MutuaEvents"/>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/xz"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

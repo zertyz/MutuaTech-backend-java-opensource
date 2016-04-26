@@ -42,11 +42,11 @@ public enum MutuaICCConfigurationInstrumentationEvents implements IInstrumentabl
 	
 	private InstrumentableEvent instrumentableEvent;
 	
-	private MutuaICCConfigurationInstrumentationEvents(String name, IInstrumentableProperty property) {
+	private MutuaICCConfigurationInstrumentationEvents(String name, InstrumentableProperty property) {
 		instrumentableEvent = new InstrumentableEvent(name, property);
 	}
 	
-	private MutuaICCConfigurationInstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+	private MutuaICCConfigurationInstrumentationEvents(String name, InstrumentableProperty property1, InstrumentableProperty property2) {
 		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
 	}
 	

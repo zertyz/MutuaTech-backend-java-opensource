@@ -70,7 +70,7 @@ public class InstrumentationTests {
 		log.addInstrumentationPropagableEventsClient(new InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents>() {
 			@InstrumentationPropagableEvent(EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT)
 			public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto event) {
-				InstrumentableEvent instrumentableEvent = event.getEvent();
+				InstrumentableEvent instrumentableEvent = event.getInstrumentableEvent();
 				if (instrumentableEvent == log.REQUEST_START_EVENT) {
 					System.out.println("PROFILE: request start");
 				} else if (instrumentableEvent == log.REQUEST_FINISH_EVENT) {

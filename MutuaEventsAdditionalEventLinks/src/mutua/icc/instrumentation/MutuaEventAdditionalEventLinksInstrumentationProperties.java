@@ -16,7 +16,7 @@ import mutua.serialization.SerializationRepository;
  * @author luiz
  */
 
-public enum MutuaEventAdditionalEventLinksInstrumentationProperties implements IInstrumentableProperty {
+public enum MutuaEventAdditionalEventLinksInstrumentationProperties implements InstrumentableProperty {
 
 	
 	// thread management

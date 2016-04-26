@@ -16,7 +16,7 @@ import java.lang.reflect.Method;
  * @author luiz
  */
 
-public class InstrumentationTestRequestProperty implements IInstrumentableProperty {
+public class InstrumentationTestRequestProperty implements InstrumentableProperty {
 
 	@Override
 	public String getInstrumentationPropertyName() {

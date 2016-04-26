@@ -5,7 +5,7 @@ import java.lang.reflect.Method;
 import java.util.Hashtable;
 
 import mutua.icc.instrumentation.IInstrumentableEvent;
-import mutua.icc.instrumentation.IInstrumentableProperty;
+import mutua.icc.instrumentation.InstrumentableProperty;
 import mutua.icc.instrumentation.InstrumentableEvent;
 import mutua.icc.instrumentation.Instrumentation;
 import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
@@ -55,7 +55,7 @@ public class InstrumentationProfilingEventsClient implements InstrumentationProp
 
 	@InstrumentationPropagableEvent(EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT)
 	public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto applicationEvent) throws IOException {
-		InstrumentableEvent instrumentableEvent = applicationEvent.getEvent();
+		InstrumentableEvent instrumentableEvent = applicationEvent.getInstrumentableEvent();
 		String applicationName = applicationEvent.getApplicationName();
 		String threadInfo = applicationEvent.getThreadInfo();
 		long eventTime = applicationEvent.getCurrentTimeMillis();
@@ -83,7 +83,7 @@ public class InstrumentationProfilingEventsClient implements InstrumentationProp
 //instrumentation events & properties
 //////////////////////////////////////
 
-enum EProfileInstrumentationProperties implements IInstrumentableProperty {
+enum EProfileInstrumentationProperties implements InstrumentableProperty {
 
 	
 	ELAPSED_MILLIS   ("elapsedMillis",   Long.TYPE),
@@ -138,11 +138,11 @@ enum EProfileInstrumentationEvents implements IInstrumentableEvent {
 	
 	private InstrumentableEvent instrumentableEvent;
 	
-	private EProfileInstrumentationEvents(String name, IInstrumentableProperty property) {
+	private EProfileInstrumentationEvents(String name, InstrumentableProperty property) {
 		instrumentableEvent = new InstrumentableEvent(name, property);
 	}
 	
-	private EProfileInstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+	private EProfileInstrumentationEvents(String name, InstrumentableProperty property1, InstrumentableProperty property2) {
 		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
 	}
 	

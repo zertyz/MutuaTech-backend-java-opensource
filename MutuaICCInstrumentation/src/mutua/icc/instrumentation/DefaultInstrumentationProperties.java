@@ -14,7 +14,7 @@ import java.lang.reflect.Method;
  * @author luiz
  */
 
-public enum DefaultInstrumentationProperties implements IInstrumentableProperty {
+public enum DefaultInstrumentationProperties implements InstrumentableProperty {
 
 	
 	DIP_MSG      ("msg",        String.class),

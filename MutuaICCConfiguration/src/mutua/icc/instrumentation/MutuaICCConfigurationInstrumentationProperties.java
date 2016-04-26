@@ -16,7 +16,7 @@ import mutua.serialization.SerializationRepository;
  * @author luiz
  */
 
-public enum MutuaICCConfigurationInstrumentationProperties implements IInstrumentableProperty {
+public enum MutuaICCConfigurationInstrumentationProperties implements InstrumentableProperty {
 
 	
 	// class loading

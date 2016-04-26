@@ -39,11 +39,11 @@ public enum MutuaEventAdditionalEventLinksInstrumentationEvents implements IInst
 	
 	private InstrumentableEvent instrumentableEvent;
 	
-	private MutuaEventAdditionalEventLinksInstrumentationEvents(String name, IInstrumentableProperty property) {
+	private MutuaEventAdditionalEventLinksInstrumentationEvents(String name, InstrumentableProperty property) {
 		instrumentableEvent = new InstrumentableEvent(name, property);
 	}
 	
-	private MutuaEventAdditionalEventLinksInstrumentationEvents(String name, IInstrumentableProperty property1, IInstrumentableProperty property2) {
+	private MutuaEventAdditionalEventLinksInstrumentationEvents(String name, InstrumentableProperty property1, InstrumentableProperty property2) {
 		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
 	}
 	
