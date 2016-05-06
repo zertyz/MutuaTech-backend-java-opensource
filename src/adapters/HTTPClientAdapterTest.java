@@ -5,10 +5,7 @@ import static org.junit.Assert.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.nio.charset.Charset;
 import java.util.List;
-
-import javax.swing.text.StyleConstants.CharacterConstants;
 
 import org.junit.Test;
 
@@ -50,8 +47,8 @@ public class HTTPClientAdapterTest {
 		request_data.addParameter("log",         "zertyz");
 		request_data.addParameter("pwd",         "PicaPau1");
 		request_data.addParameter("testcookie",  "1");
-		request_data.addParameter("redirect_to", "http://dominandoriscos.com.br/wp-admin/");
-		String response = HTTPClientAdapter.requestPost("http://dominandoriscos.com.br/wp-login.php", request_data, null, "UTF-8");
+		request_data.addParameter("redirect_to", "http://http://dominandoriscos.mutuatech.com/wp-admin/");
+		String response = HTTPClientAdapter.requestPost("http://dominandoriscos.mutuatech.com/wp-login.php", request_data, null, "UTF-8");
 		boolean found = response.indexOf("Cookies are blocked or not supported by your browser.") != -1;
 		assertTrue("Word Press' login form didn't receive a correct post request", found);
 	}
@@ -158,9 +155,8 @@ public class HTTPClientAdapterTest {
 	@Test
 	public void testRedirectionResponse() throws IOException {
 		// try to fetch a URL that will respond as a redirection for another URL
-		boolean originalFollowRedirects = HTTPClientAdapter.FOLLOW_REDIRECTS;
+		HTTPClientAdapter.configureDefaultValuesForNewInstances(-1, -1, false);	// don't follow the redirection
 		try {
-			HTTPClientAdapter.FOLLOW_REDIRECTS = false;
 			String toBeRedirectedURL = "http://google.com";	// will be redirected to http://google.com.br/ throw HTTP 302 Found response
 			String expectedRedirectionPattern = "http://www.google.com.br/.*";
 			HTTPResponseDto toBeRedirectedResponse = HTTPClientAdapter.requestGet(toBeRedirectedURL, null);
@@ -171,7 +167,7 @@ public class HTTPClientAdapterTest {
 			
 			System.out.println(toBeRedirectedURL + " - " + toBeRedirectedResponse);
 		} finally {
-			HTTPClientAdapter.FOLLOW_REDIRECTS = originalFollowRedirects;
+			HTTPClientAdapter.configureDefaultValuesForNewInstances(-1, -1, false);	// restore following redirections to the default value
 		}
 
 	}
@@ -182,23 +178,21 @@ public class HTTPClientAdapterTest {
 	
 	@Test(expected=SocketTimeoutException.class)
 	public void testConnectionTimeout() throws IOException {
-		int originalTimeout = HTTPClientAdapter.CONNECTION_TIMEOUT;
+		HTTPClientAdapter.configureDefaultValuesForNewInstances(10, -1, false);	// set a new connection timeout
 		try {
-			HTTPClientAdapter.CONNECTION_TIMEOUT = 10;
 			HTTPClientAdapter.requestGet("http://gizmodo.com/5041005/earths-most-distant-web-cam-pics-went-live-this-week", null);
 		} finally {
-			HTTPClientAdapter.CONNECTION_TIMEOUT = originalTimeout;
+			HTTPClientAdapter.configureDefaultValuesForNewInstances(30000, -1, false);	// restore the connection timeout
 		}
 	}
 	
 	@Test(expected=SocketTimeoutException.class)
 	public void testReadTimeout() throws IOException {
-		int originalTimeout = HTTPClientAdapter.READ_TIMEOUT;
+		HTTPClientAdapter.configureDefaultValuesForNewInstances(-1, 10, false);	// set a new read timeout
 		try {
-			HTTPClientAdapter.READ_TIMEOUT = 10;
 			HTTPClientAdapter.requestGet("http://gizmodo.com/5041005/earths-most-distant-web-cam-pics-went-live-this-week", null);
 		} finally {
-			HTTPClientAdapter.READ_TIMEOUT = originalTimeout;
+			HTTPClientAdapter.configureDefaultValuesForNewInstances(-1, 30000, false);	// restore the read timeout
 		}
 	}
 
