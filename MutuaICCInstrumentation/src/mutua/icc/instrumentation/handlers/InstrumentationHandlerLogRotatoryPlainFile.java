@@ -4,6 +4,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+
 /** <pre>
  * InstrumentationHandlerLogRotatoryPlainFile.java
  * ===============================================
@@ -17,8 +19,8 @@ import java.io.PrintStream;
 
 public class InstrumentationHandlerLogRotatoryPlainFile extends InstrumentationHandlerLogRotatoryFile {
 
-	public InstrumentationHandlerLogRotatoryPlainFile(String applicationName, String fsPathPrefix, String fsPathSuffix, int minimumLogLevel, int rotationFrequency) {
-		super(applicationName, fsPathPrefix, fsPathSuffix, minimumLogLevel, rotationFrequency);
+	public InstrumentationHandlerLogRotatoryPlainFile(String applicationName, String fsPathPrefix, String fsPathSuffix, ELogSeverity minimumLogSeverity, int rotationFrequency) {
+		super(applicationName, fsPathPrefix, fsPathSuffix, minimumLogSeverity, rotationFrequency);
 	}
 
 	@Override

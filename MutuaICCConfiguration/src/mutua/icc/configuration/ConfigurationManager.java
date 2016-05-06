@@ -1,7 +1,6 @@
 package mutua.icc.configuration;
 
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents.*;
-import static mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationProperties.*;
+import static mutua.icc.configuration.ConfigurationInstrumentationMethods.*;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
@@ -10,11 +9,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 
 import mutua.icc.configuration.annotations.ConfigurableElement;
 import mutua.icc.instrumentation.Instrumentation;
-import mutua.icc.instrumentation.MutuaICCConfigurationInstrumentationEvents;
 import mutua.serialization.SerializationRepository;
 
 /** <pre>
@@ -32,13 +29,10 @@ import mutua.serialization.SerializationRepository;
 public class ConfigurationManager {
 	
 	
-	private final Instrumentation<?, ?> log;
 	private final Class<?>[] configurableClasses;
 	
 	
-	public ConfigurationManager(Instrumentation<?, ?> log, Class<?>... configurableClasses) {
-		this.log = log;
-		log.addInstrumentableEvents(MutuaICCConfigurationInstrumentationEvents.values());
+	public ConfigurationManager(Class<?>... configurableClasses) {
 		this.configurableClasses = configurableClasses;
 	}
 
@@ -171,24 +165,12 @@ public class ConfigurationManager {
 		return buffer.toString();
 	}
 	
-	private void reportThatFieldIsNotPresentOnConfiguration(String type, Field f) {
-		try {
-			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is not present on configuration. Using default value of '"+f.get(null)+"'");
-		} catch (Throwable t) {
-			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, type+" property '"+f.getName()+"' is neither present on configuration nor has a default value (or it is inaccessable)");
-		}
-	}
-	
-	private void logScalarFieldDeclaredAsVector(Field f, String[] values) {
-		log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Scalar property '"+f.getName()+"' was wrongly declared as an array containing values "+Arrays.deepToString(values));
-	}
-	
 	private String requestScalarValue(Field f, ConfigurationParser cp) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException {
 		String fieldName = f.getName();
 		String[] values = cp.getValues(fieldName);
 		// detect errors
 		if (values == null) {
-			reportThatFieldIsNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
+			logFieldIsNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
 		} else if ((values.length == 0) || (values.length > 1)) {
 			logScalarFieldDeclaredAsVector(f, values);
 		} else {
@@ -203,7 +185,7 @@ public class ConfigurationManager {
 		String[] values = cp.getValues(fieldName);
 		// detect errors
 		if (values == null) {
-			reportThatFieldIsNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
+			logFieldIsNotPresentOnConfiguration(f.getType().getCanonicalName(), f);
 			throw new java.lang.NoSuchFieldException();
 		} else {
 			return values;
@@ -227,19 +209,19 @@ public class ConfigurationManager {
 				String s = requestScalarValue(f, cp);
 				s = SerializationRepository.deserialize(s);
 				f.set(null, s);
-				log.reportEvent(IE_CONFIGURING_STRING_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_STRING_FIELD_VALUE, s);
+				reportConfigureStringField(fName, s);
 			} catch (NoSuchFieldException e) {
 			} else if (fType == long.class) try {
 				String s = requestScalarValue(f, cp);
 				long l = Long.parseLong(s);
 				f.set(null, l);
-				log.reportEvent(IE_CONFIGURING_NUMBER_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_NUMBER_FIELD_VALUE, l);
+				reportConfigureNumberField(fName, l);
 			} catch (NoSuchFieldException e) {
 			} else if (fType == int.class) try {
 				String s = requestScalarValue(f, cp);
 				int i = Integer.parseInt(s);
 				f.set(null, i);
-				log.reportEvent(IE_CONFIGURING_NUMBER_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_NUMBER_FIELD_VALUE, i);
+				reportConfigureNumberField(fName, i);
 			} catch (NoSuchFieldException e) {
 			} else if (fType == String[].class) try {
 				String[] ss = requestVectorValue(f, cp);
@@ -248,30 +230,30 @@ public class ConfigurationManager {
 					ss[i] = s;
 				}
 				f.set(null, ss);
-				log.reportEvent(IE_CONFIGURING_STRING_ARRAY_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_STRING_ARRAY_FIELD_VALUE, ss);
+				reportConfigureStringArrayField(fName, ss);
 			} catch (NoSuchFieldException e) {
 			} else if (fType == boolean.class) try {
 				String s = requestScalarValue(f, cp);
 				boolean b = Boolean.parseBoolean(s);
 				f.set(null, b);
-				log.reportEvent(IE_CONFIGURING_BOOLEAN_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_BOOLEAN_FIELD_VALUE, b);
+				reportConfigureBooleanField(fName, b);
 			} catch (NoSuchFieldException e) {
 			} else if (fType.isEnum()) DONE: try {
 				String e = requestScalarValue(f, cp);
 				for (Object enumConstant: fType.getEnumConstants()) {
 					if (enumConstant.toString().equals(e)) {
 						f.set(null, enumConstant);
-						log.reportEvent(IE_CONFIGURING_ENUMERATION_PROPERTY, IP_CONFIGURATION_FIELD_NAME, fName, IP_CONFIGURATION_ENUMERATION_FIELD_VALUE, enumConstant);
+						reportConfigureEnumerationField(fName, enumConstant);
 						break DONE;
 					}
 				}
-				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Value '"+e+"' is not recognized as a valid value for Enum '"+fType.getCanonicalName()+"'");
+				reportDeserializationError("Value '"+e+"' is not recognized as a valid value for Enum '"+fType.getCanonicalName()+"'");
 			} catch (NoSuchFieldException e) {
 			} else {
-				log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Don't know how to desserialize type '"+fType.getCanonicalName()+"' for field '"+f.getName()+"'");
+				reportDeserializationError("Don't know how to desserialize type '"+fType.getCanonicalName()+"' for field '"+f.getName()+"'");
 			}
 		} catch (NumberFormatException e) {
-			log.reportThrowable(e, "Error while attempt to configure field '"+f.getName()+"'");
+			Instrumentation.reportThrowable(e, "Error while attempt to configure field '"+f.getName()+"'");
 		}
 	}
 	
@@ -283,25 +265,25 @@ public class ConfigurationManager {
 		for (Object[] errorLine : cp.getErrorLines()) {
 			int    errorLineNumber  = (Integer) errorLine[0];
 			String errorLineContent = (String)  errorLine[1];
-			log.reportEvent(IE_DESSERIALIZATION_ERROR, IP_ERROR_MSG, "Configuration format error at line #"+errorLineNumber+": "+errorLineContent);
+			reportDeserializationError("Configuration format error at line #"+errorLineNumber+": "+errorLineContent);
 		}
 		
 		try {
 			for (Class<?> configurableClass : configurableClasses) {
-				log.reportEvent(IE_CONFIGURING_CLASS, IP_CLASS, configurableClass);
+				reportConfigureClass(configurableClass);
 				desserializeStaticFields(configurableClass, cp);
 			}
 		} catch (Throwable t) {
-			log.reportThrowable(t, "Exception while attempting to load values into one of the provided configurable classes");
+			Instrumentation.reportThrowable(t, "Exception while attempting to load values into one of the provided configurable classes");
 			t.printStackTrace();
 			String originalSerializedFields = serializeConfigurableClasses();
-			log.reportDebug("Dumping the configuration model with default values for the provided classes: " + originalSerializedFields);
+			Instrumentation.reportDebug("Dumping the configuration model with default values for the provided classes: " + originalSerializedFields);
 		}
 			
 	}
 
 	public void loadFromFile(String filePath) throws IOException, IllegalArgumentException, IllegalAccessException {
-		log.reportEvent(IE_LOADING_CONFIGURATION_FILE, IP_FILE_NAME, filePath);
+		reportLoadConfigurationFile(filePath);
 		BufferedReader br = new BufferedReader(new FileReader(filePath));
 		StringBuffer fileContents = new StringBuffer();
 		String line;

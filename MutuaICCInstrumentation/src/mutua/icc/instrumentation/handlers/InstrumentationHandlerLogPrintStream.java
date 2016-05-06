@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
 import mutua.icc.instrumentation.InstrumentableProperty;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 import mutua.serialization.SerializationRepository;
@@ -20,41 +21,27 @@ import mutua.serialization.SerializationRepository;
  *
  * @see InstrumentationHandlerLogConsole
  * @see InstrumentationHandlerLogPlainFile
+ * @see InstrumentationHandlerLogRotatoryFile
  * @version $Id$
  * @author luiz
 */
 
 public class InstrumentationHandlerLogPrintStream implements IInstrumentationHandler {
 	
-	// flags that may be used when creating an 'IInstrumentableEvent', which will be returned by 'IInstrumentableEvent.getInstrumentableEventFlags()'
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	/** {@link IInstrumentableEvent}s flagged with this property denotes log messages that present details which are only useful for developers to improve the software */
-	public static final int DEBUG    = 1;
-	/** {@link IInstrumentableEvent}s flagged with this property denotes log messages that are similar to {@link #DEBUG}, but which information could be exploited by
-	 *  reverse engineersto overcome the license and/or author rights protections and, therefore,should be either presented criptically or not presented at all, on production */
-	public static final int CRYPT    = 2;
-	/** {@link IInstrumentableEvent}s flagged with this property denotes log data that present additional information that helps the reproduction of the execution scenarios -- either in normal or error circumstances */
-	public static final int INFO     = 4;
-	/** {@link IInstrumentableEvent}s flagged with this property denotes log data that present minimal information needed to reproduce any #ERROR scenarios */
-	public static final int CRITICAL = 8;
-	/** {@link IInstrumentableEvent}s flagged with this property denotes log data corresponding to any thrown 'Errors', 'Exceptions' and 'Throwable' */
-	public static final int ERROR    = 16;
-
 	protected       PrintStream  out;
 	protected final StringBuffer logLine;
 	private   final String       applicationName;
-	private   final int          minimumLogLevel;
+	private   final int          minimumLogSeverityOrdinal;
 
-	public InstrumentationHandlerLogPrintStream(String applicationName, PrintStream out, int minimumLogLevel) {
-		this.applicationName = applicationName;
-		this.out             = out;
-		this.minimumLogLevel = minimumLogLevel;
-		logLine = new StringBuffer(128);
+	public InstrumentationHandlerLogPrintStream(String applicationName, PrintStream out, ELogSeverity minimumLogSeverity) {
+		this.applicationName           = applicationName;
+		this.out                       = out;
+		this.minimumLogSeverityOrdinal = minimumLogSeverity.ordinal();
+		logLine                        = new StringBuffer(128);
 	}
 	
-	public InstrumentationHandlerLogPrintStream(String applicationName, OutputStream out, int minimumLogLevel) {
-		this(applicationName, getPrintStream(out), minimumLogLevel);
+	public InstrumentationHandlerLogPrintStream(String applicationName, OutputStream out, ELogSeverity minimumLogSeverity) {
+		this(applicationName, getPrintStream(out), minimumLogSeverity);
 	}
 	
 	protected static PrintStream getPrintStream(OutputStream out) {
@@ -76,7 +63,7 @@ public class InstrumentationHandlerLogPrintStream implements IInstrumentationHan
 	public void onInstrumentationEvent(InstrumentationEventDto instrumentationEvent) {
 		
 		// only log events for which the InstrumentableEvent is flagged with a level equal or greater than this instance's chosen 'minimumLogLevel'
-		if (instrumentationEvent.instrumentableEvent.eventFlags < minimumLogLevel) {
+		if (instrumentationEvent.instrumentableEvent.logSeverityOrdinal < minimumLogSeverityOrdinal) {
 			return;
 		}
 		
@@ -103,8 +90,8 @@ public class InstrumentationHandlerLogPrintStream implements IInstrumentationHan
 						Object logEventPropertyValue = instrumentationEvent.propertiesAndValues[i+1];
 						
 						Class<?> type = instrumentableProperty.propertyType;
-						if ((type == Integer.TYPE) || (type == Long.TYPE) || (type == Double.TYPE) || (type == Float.TYPE) ||
-						    (type == Short.TYPE)   || (type == Byte.TYPE) || (type == Boolean.TYPE)) {
+						if ((type == Integer.class) || (type == Long.class) || (type == Double.class) || (type == Float.class) ||
+						    (type == Short.class)   || (type == Byte.class) || (type == Boolean.class)) {
 							logLine.append(logEventPropertyValue);
 						} else if (type == String.class) {
 							SerializationRepository.serialize(logLine.append('"'), (String)logEventPropertyValue).append('"');
@@ -132,4 +119,11 @@ public class InstrumentationHandlerLogPrintStream implements IInstrumentationHan
 		onInstrumentationEvent(requestFinishInstrumentationEvent);
 	}
 
+	@Override
+	public void close() {
+		if (out != null) {
+			out.close();
+			out = null;
+		}
+	}
 }

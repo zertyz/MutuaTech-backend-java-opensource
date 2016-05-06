@@ -18,6 +18,8 @@ import mutua.icc.instrumentation.InstrumentableProperty;
 
 public class InstrumentationEventDto {
 	
+	private static final Object[] zeroLength1DObjectArray = {};
+	
 	public final long currentTimeMillis;
 	public final String threadInfo;
 	public final InstrumentableEvent instrumentableEvent;
@@ -28,7 +30,14 @@ public class InstrumentationEventDto {
 		this.currentTimeMillis   = currentTimeMillis;
 		this.threadInfo          = thread.toString();
 		this.instrumentableEvent = event;
-		this.propertiesAndValues = null;
+		this.propertiesAndValues = zeroLength1DObjectArray;
+	}
+	
+	public InstrumentationEventDto(long currentTimeMillis, Thread thread, InstrumentableEvent event, Object[] propertiesAndValues) {
+		this.currentTimeMillis   = currentTimeMillis;
+		this.threadInfo          = thread.toString();
+		this.instrumentableEvent = event;
+		this.propertiesAndValues = propertiesAndValues;
 	}
 
 	public InstrumentationEventDto(long currentTimeMillis, Thread thread, InstrumentableEvent event,

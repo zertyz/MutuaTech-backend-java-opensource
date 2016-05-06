@@ -1,5 +1,7 @@
 package mutua.icc.instrumentation.handlers;
 
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+
 /** <pre>
  * InstrumentationHandlerLogConsole.java
  * =====================================
@@ -13,8 +15,15 @@ package mutua.icc.instrumentation.handlers;
 
 public class InstrumentationHandlerLogConsole extends InstrumentationHandlerLogPrintStream {
 
-	public InstrumentationHandlerLogConsole(String applicationName, int minimumLogLevel) {
-		super(applicationName, System.out, minimumLogLevel);
+	public InstrumentationHandlerLogConsole(String applicationName, ELogSeverity minimumLogSeverity) {
+		super(applicationName, System.out, minimumLogSeverity);
 	}
+
+	@Override
+	public void close() {
+		// do noting -- that is, do not close the System.out stream
+	}
+	
+	
 
 }

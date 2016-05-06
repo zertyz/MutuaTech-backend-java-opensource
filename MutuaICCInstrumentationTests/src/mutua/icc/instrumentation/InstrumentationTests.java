@@ -1,16 +1,13 @@
 package mutua.icc.instrumentation;
 
-import static mutua.icc.instrumentation.InstrumentationEvents.NOPROP_EVENT;
-import static mutua.icc.instrumentation.InstrumentationEvents.ONEPROP_EVENT;
-import static mutua.icc.instrumentation.InstrumentationEvents.TWOPROP_EVENT;
-import static mutua.icc.instrumentation.InstrumentationProperties.DAY_OF_WEEK;
-import static mutua.icc.instrumentation.InstrumentationProperties.MAIL;
-import mutua.icc.instrumentation.Instrumentation.EInstrumentationPropagableEvents;
-import mutua.icc.instrumentation.Instrumentation.InstrumentationPropagableEvent;
-import mutua.icc.instrumentation.dto.InstrumentationEventDto;
-import mutua.icc.instrumentation.eventclients.InstrumentationPropagableEventsClient;
-import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
-import mutua.imi.IndirectMethodNotFoundException;
+import static mutua.icc.instrumentation.TestInstrumentationMethods.*;
+
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
+
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+import mutua.icc.instrumentation.handlers.IInstrumentationHandler;
+import mutua.icc.instrumentation.handlers.InstrumentationHandlerLogPlainFile;
 
 import org.junit.Test;
 
@@ -28,29 +25,33 @@ import org.junit.Test;
 
 public class InstrumentationTests {
 	
-	private static Instrumentation<InstrumentationTestRequestProperty, String> log = new Instrumentation<InstrumentationTestRequestProperty, String>(
-			"InstrumentationTests", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
+	public InstrumentationTests() throws UnsupportedEncodingException, FileNotFoundException {
+		IInstrumentationHandler logInstrumentationHandler;
+		//logInstrumentationHandler = new InstrumentationHandlerLogConsole  ("InstrumentationTests",                       InstrumentationHandlerLogPrintStream.DEBUG);
+		logInstrumentationHandler = new InstrumentationHandlerLogPlainFile("InstrumentationTests", "/tmp/permanent.log", ELogSeverity.DEBUG);
+		Instrumentation.configureDefaultValuesForNewInstances(logInstrumentationHandler, logInstrumentationHandler, logInstrumentationHandler);
+	}
 	
 	@Test
 	public void simpleTest() {
-		log.reportRequestStart("simpleTest");
-		log.reportEvent(NOPROP_EVENT);
-		log.reportEvent(ONEPROP_EVENT, DAY_OF_WEEK, "Que se foda");
-		log.reportEvent(TWOPROP_EVENT, DAY_OF_WEEK, "nao me foda tanto", MAIL, new TestType("de", "para"));
-		log.reportThrowable(new RuntimeException("Some thing happened"), "This is a test exception created on purpose");
-		log.reportRequestFinish();
+		startTestRequest("simpleTest");
+		NOPROP_EVENT();
+		ONEPROP_EVENT("Que se foda");
+		TWOPROP_EVENT("nao me foda tanto", new TestType("de", "para"));
+		Instrumentation.reportThrowable(new RuntimeException("Some thing happened"), "This is a test exception created on purpose");
+		finishTestRequest();
 	}
 
 	@Test
 	public void unfinishedRequestProcessingTest() {
-		log.reportRequestStart("unfinishedRequestProcessingTest");
-		log.reportRequestStart("unfinishedRequestProcessingTest2");
-		log.reportRequestFinish();
+		startTestRequest("unfinishedRequestProcessingTest");
+		startTestRequest("unfinishedRequestProcessingTest2");
+		finishTestRequest();
 	}
 
 	@Test
 	public void unfinishedRequestProcessingBeforeShutdownTest() {
-		log.reportRequestStart("unfinishedRequestProcessingBeforeShutdownTest");
+		startTestRequest("unfinishedRequestProcessingBeforeShutdownTest");
 	}
 	
 	@Test
@@ -58,43 +59,43 @@ public class InstrumentationTests {
 		new Thread() {
 			@Override
 			public void run() {
-				log.reportRequestStart("uncoughtExceptionTest");
-				throw new RuntimeException("there is no try/catch for this one");
+				startTestRequest("uncoughtExceptionTest");
+				throw new RuntimeException("there is no explicit try/catch for this one. It should be caught by the instrumentation facility though");
 			}
 			
 		}.start();
 	}
 	
-	@Test
-	public void customPropagableInstrumentationEventClientTest() throws IndirectMethodNotFoundException {
-		log.addInstrumentationPropagableEventsClient(new InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents>() {
-			@InstrumentationPropagableEvent(EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT)
-			public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto event) {
-				InstrumentableEvent instrumentableEvent = event.getInstrumentableEvent();
-				if (instrumentableEvent == log.REQUEST_START_EVENT) {
-					System.out.println("PROFILE: request start");
-				} else if (instrumentableEvent == log.REQUEST_FINISH_EVENT) {
-					System.out.println("PROFILE: request finish");
-				} else {
-					System.out.println("PROFILE: unimportant internal event");
-				}
-			}
-		});
-		log.reportRequestStart("customPropagableInstrumentationEventClientTest");
-		log.reportEvent(ONEPROP_EVENT, DAY_OF_WEEK, "QSF");
-		log.reportRequestFinish();
-	}
+//	@Test
+//	public void customPropagableInstrumentationEventClientTest() throws IndirectMethodNotFoundException {
+//		log.addInstrumentationPropagableEventsClient(new InstrumentationPropagableEventsClient<EInstrumentationPropagableEvents>() {
+//			@InstrumentationPropagableEvent(EInstrumentationPropagableEvents.INTERNAL_FRAMEWORK_INSTRUMENTATION_EVENT)
+//			public void handleInternalFrameworkInstrumentationEventNotification(InstrumentationEventDto event) {
+//				InstrumentableEvent instrumentableEvent = event.getInstrumentableEvent();
+//				if (instrumentableEvent == log.REQUEST_START_EVENT) {
+//					System.out.println("PROFILE: request start");
+//				} else if (instrumentableEvent == log.REQUEST_FINISH_EVENT) {
+//					System.out.println("PROFILE: request finish");
+//				} else {
+//					System.out.println("PROFILE: unimportant internal event");
+//				}
+//			}
+//		});
+//		log.reportRequestStart("customPropagableInstrumentationEventClientTest");
+//		log.reportEvent(ONEPROP_EVENT, DAY_OF_WEEK, "QSF");
+//		log.reportRequestFinish();
+//	}
 
-	@Test
-	public void oneEventForEachLogInstance() {
-		Instrumentation<InstrumentationTestRequestProperty, String> log1 = new Instrumentation<InstrumentationTestRequestProperty, String>(
-				"LogInstance1", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
-		Instrumentation<InstrumentationTestRequestProperty, String> log2 = new Instrumentation<InstrumentationTestRequestProperty, String>(
-				"LogInstance2", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
-		Instrumentation<InstrumentationTestRequestProperty, String> log3 = new Instrumentation<InstrumentationTestRequestProperty, String>(
-				"LogInstance3", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, "differentKey", InstrumentationEvents.values());
-		log1.reportDebug("This should go only to log1");
-		log2.reportDebug("This should go only to log2");
-		log3.reportDebug("This should go only to log3");
-	}
+//	@Test
+//	public void oneEventForEachLogInstance() {
+//		Instrumentation<InstrumentationTestRequestProperty, String> log1 = new Instrumentation<InstrumentationTestRequestProperty, String>(
+//				"LogInstance1", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
+//		Instrumentation<InstrumentationTestRequestProperty, String> log2 = new Instrumentation<InstrumentationTestRequestProperty, String>(
+//				"LogInstance2", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, null, InstrumentationEvents.values());
+//		Instrumentation<InstrumentationTestRequestProperty, String> log3 = new Instrumentation<InstrumentationTestRequestProperty, String>(
+//				"LogInstance3", new InstrumentationTestRequestProperty(), EInstrumentationDataPours.CONSOLE, "differentKey", InstrumentationEvents.values());
+//		log1.reportDebug("This should go only to log1");
+//		log2.reportDebug("This should go only to log2");
+//		log3.reportDebug("This should go only to log3");
+//	}
 }

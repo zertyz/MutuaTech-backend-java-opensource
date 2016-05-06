@@ -1,50 +1,62 @@
 package mutua.icc.instrumentation;
 
-import static mutua.icc.instrumentation.DefaultInstrumentationProperties.*;
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
 
 /** <pre>
  * DefaultInstrumentationEvents.java
  * =================================
  * (created by luiz, Jan 21, 2015)
  *
- * Defines the common instrumentation events that can participate on instrumentation logs
+ * Defines the internal instrumentation events used by the Instrumentation facility
  *
- * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
 
-public enum DefaultInstrumentationEvents implements IInstrumentableEvent {
+public class DefaultInstrumentationEvents {
 
+	// 'InstrumentableEvent's
+	/////////////////////////
 	
-	DIE_APP_START          ("APP_START"),
-	DIE_APP_SHUTDOWN       ("APP_SHUTDOWN"),
-	DIE_UNCOUGHT_EXCEPTION ("UNCOUGHT_EXCEPTION", DIP_MSG, DIP_THROWABLE),
-	DIE_REPORTED_THROWABLE ("REPORTED_THROWABLE", DIP_MSG, DIP_THROWABLE),
-	DIE_ERROR              ("ERROR",              DIP_MSG),
-	DIE_WARNING            ("WARNING",            DIP_MSG),
-	DIE_DEBUG              ("DEBUG",              DIP_MSG),
-	
-	
-	;
-	
-	
-	private InstrumentableEvent instrumentableEvent;
-	
-	private DefaultInstrumentationEvents(String name, InstrumentableProperty property) {
-		instrumentableEvent = new InstrumentableEvent(name, property);
-	}
-	
-	private DefaultInstrumentationEvents(String name, InstrumentableProperty property1, InstrumentableProperty property2) {
-		instrumentableEvent = new InstrumentableEvent(name, property1, property2);
-	}
-	
-	private DefaultInstrumentationEvents(String name) {
-		instrumentableEvent = new InstrumentableEvent(name);
-	}
+	// ... 'Instrumentation' internal events
+	public static final InstrumentableEvent APP_START_EVENT;
+	public static final InstrumentableEvent APP_SHUTDOWN_EVENT;
+	public static final InstrumentableEvent REQUEST_START_EVENT;
+	public static final InstrumentableEvent REQUEST_FINISH_EVENT;
+	public static final InstrumentableEvent UNCOUGHT_EXCEPTION_EVENT;
+	public static final InstrumentableEvent REPORTED_THROWABLE_EVENT;
+	public static final InstrumentableEvent DEBUG_EVENT;
 
-	@Override
-	public InstrumentableEvent getInstrumentableEvent() {
-		return instrumentableEvent;
+	// ... 'RAM' event handler internal events
+	public static final InstrumentableEvent UNFINISHED_REQUEST_EVENT;
+	
+	// ... 'Profile' event handler internal events
+	public static final InstrumentableEvent PROFILED_REQUEST_EVENT;
+	
+	// 'InstrumentableProperty'ies
+	//////////////////////////////
+	
+	// ... 'Instrumentation' internal properties
+	public static final InstrumentableProperty MSG_PROPERTY;
+	public static final InstrumentableProperty THROWABLE_PROPERTY;
+	
+	
+	static {
+		MSG_PROPERTY       = new InstrumentableProperty("msg",        String.class);
+		THROWABLE_PROPERTY = new InstrumentableProperty("stackTrace", Throwable.class);
+
+		APP_START_EVENT          = new InstrumentableEvent("APP_START",          ELogSeverity.CRITICAL);
+		APP_SHUTDOWN_EVENT       = new InstrumentableEvent("APP_SHUTDOWN",       ELogSeverity.CRITICAL);
+		REQUEST_START_EVENT      = new InstrumentableEvent("REQUEST START",      ELogSeverity.CRITICAL);
+		REQUEST_FINISH_EVENT     = new InstrumentableEvent("REQUEST FINISH",     ELogSeverity.CRITICAL);
+		UNCOUGHT_EXCEPTION_EVENT = new InstrumentableEvent("UNCOUGHT_EXCEPTION", ELogSeverity.ERROR,    THROWABLE_PROPERTY);
+		REPORTED_THROWABLE_EVENT = new InstrumentableEvent("REPORTED_THROWABLE", ELogSeverity.ERROR,    THROWABLE_PROPERTY);
+		DEBUG_EVENT              = new InstrumentableEvent("DEBUG",              ELogSeverity.DEBUG);
+
+		UNFINISHED_REQUEST_EVENT = new InstrumentableEvent("UNFINISHED REQUEST", ELogSeverity.ERROR,    (InstrumentableProperty[])null);
+		
+		PROFILED_REQUEST_EVENT   = new InstrumentableEvent("PROFILED REQUEST",   ELogSeverity.INFO);
+
 	}
+	
 }

@@ -7,9 +7,10 @@ import adapters.PostgreSQLAdapter;
 import mutua.events.PostgreSQLQueueEventLink;
 import mutua.events.TestAdditionalEventServer.TestAdditionalEvent;
 import mutua.events.postgresql.QueuesPostgreSQLAdapter;
-import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
-import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+import mutua.icc.instrumentation.handlers.IInstrumentationHandler;
+import mutua.icc.instrumentation.handlers.InstrumentationHandlerLogConsole;
 
 /** <pre>
  * MutuaEventsAdditionalEventLinksConfiguration.java
@@ -26,10 +27,7 @@ import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
 */
 
 public class MutuaEventsAdditionalEventLinksTestsConfiguration {
-	
-	// log
-	public static Instrumentation<DefaultInstrumentationProperties, String> LOG;
-	
+		
 	public static int PERFORMANCE_TESTS_LOAD_FACTOR;
 	
 	// default values
@@ -53,19 +51,18 @@ public class MutuaEventsAdditionalEventLinksTestsConfiguration {
 	 *  @param queuePoolingTime             is -1
 	 *  @param queueNumberOfWorkerThreads   is -1
 	 *  @param postgresqlConnectionPoolSize is -1 */
-	public static void configureDefaultValuesForNewInstances(Instrumentation<DefaultInstrumentationProperties, String> log, 
+	public static void configureDefaultValuesForNewInstances( 
 		int performanceTestsLoadFactor, long queuePoolingTime, int queueNumberOfWorkerThreads,
 		String postgreSQLconnectionProperties, int postgreSQLConnectionPoolSize,
 		boolean postgreSQLAllowDataStructuresAssertion, boolean postgreSQLShouldDebugQueries,
 		String postgreSQLHostname, int postgreSQLPort, String postgreSQLDatabase, String postgreSQLUser, String postgreSQLPassword) throws SQLException {
 		
-		LOG                           = log;
-		PERFORMANCE_TESTS_LOAD_FACTOR = performanceTestsLoadFactor;		
-		
+		PERFORMANCE_TESTS_LOAD_FACTOR = performanceTestsLoadFactor;
+				
 		// PostgreSQL
 		PostgreSQLAdapter.configureDefaultValuesForNewInstances(postgreSQLconnectionProperties, postgreSQLConnectionPoolSize);
-		QueuesPostgreSQLAdapter.configureDefaultValuesForNewInstances(log, postgreSQLAllowDataStructuresAssertion, postgreSQLShouldDebugQueries, postgreSQLHostname, postgreSQLPort, postgreSQLDatabase, postgreSQLUser, postgreSQLPassword);
-		PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(log, queuePoolingTime, queueNumberOfWorkerThreads);
+		QueuesPostgreSQLAdapter.configureDefaultValuesForNewInstances(postgreSQLAllowDataStructuresAssertion, postgreSQLShouldDebugQueries, postgreSQLHostname, postgreSQLPort, postgreSQLDatabase, postgreSQLUser, postgreSQLPassword);
+		PostgreSQLQueueEventLink.configureDefaultValuesForNewInstances(queuePoolingTime, queueNumberOfWorkerThreads);
 		
 		System.err.println(MutuaEventsAdditionalEventLinksTestsConfiguration.class.getCanonicalName() + ": test configuration loaded.");
 
@@ -73,11 +70,12 @@ public class MutuaEventsAdditionalEventLinksTestsConfiguration {
 
 	static {
 		
+		// Instrumentation
+		IInstrumentationHandler log = new InstrumentationHandlerLogConsole("MutuaEventsAdditionalEventLinksTests", ELogSeverity.DEBUG);
+		Instrumentation.configureDefaultValuesForNewInstances(log, log, log);
+		
 		try {
 			configureDefaultValuesForNewInstances(
-				// log
-					new Instrumentation<DefaultInstrumentationProperties, String>("MutuaEventsAdditionalEventLinksTests",
-						DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null),
 				// load factor, pooling time and worker threads
 				1, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS,
 				// PostgreSQL properties

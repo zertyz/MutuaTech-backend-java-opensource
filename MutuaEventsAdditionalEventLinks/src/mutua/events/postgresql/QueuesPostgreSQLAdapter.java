@@ -1,13 +1,10 @@
 package mutua.events.postgresql;
 
-import static mutua.icc.instrumentation.DefaultInstrumentationProperties.DIP_MSG;
-import static mutua.icc.instrumentation.JDBCAdapterInstrumentationEvents.IE_DATABASE_ADMINISTRATION_WARNING;
-
 import java.sql.SQLException;
 
-import mutua.icc.instrumentation.Instrumentation;
 import adapters.AbstractPreparedProcedure;
 import adapters.IJDBCAdapterParameterDefinition;
+import adapters.JDBCAdapterInstrumentationMethods;
 import adapters.PostgreSQLAdapter;
 
 /** <pre>
@@ -40,7 +37,6 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	//private static SMSAppModulePostgreSQLAdapter instance = null;
 	
 	// JDBCAdapter default values
-	private static Instrumentation<?, ?> LOG;
 	private static String HOSTNAME;
 	private static int    PORT;
 	private static String DATABASE;
@@ -51,10 +47,9 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 		
 	/** method to be called when attempting to configure the default behavior for new instances of 'QueuesPostgreSQLAdapter' */
 	public static void configureDefaultValuesForNewInstances(
-		Instrumentation<?, ?> log, boolean allowDataStructuresAssertion, boolean shouldDebugQueries,
+		boolean allowDataStructuresAssertion, boolean shouldDebugQueries,
 	    String hostname, int port, String database, String user, String password) {
 		
-		LOG      = log;
 		ALLOW_DATA_STRUCTURES_ASSERTION = allowDataStructuresAssertion;
 		SHOULD_DEBUG_QUERIES            = shouldDebugQueries;
 		HOSTNAME = hostname;
@@ -190,17 +185,17 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	public final AbstractPreparedProcedure PopFallbackElements;
 
 
-	private QueuesPostgreSQLAdapter(Instrumentation<?, ?> log, String queueTableName, String fieldsCreationLine,
+	private QueuesPostgreSQLAdapter(String queueTableName, String fieldsCreationLine,
 	                                String queueElementFieldList,
 	                                IJDBCAdapterParameterDefinition[] parametersListForInsertNewQueueElementQuery,
                                     int queueNumberOfWorkerThreads) throws SQLException {
-		super(log, false, SHOULD_DEBUG_QUERIES, HOSTNAME, PORT, DATABASE, USER, PASSWORD);
+		super(false, SHOULD_DEBUG_QUERIES, HOSTNAME, PORT, DATABASE, USER, PASSWORD);
 		this.queueTableName     = queueTableName;
 		this.fieldsCreationLine = fieldsCreationLine;
 		// the execution of the following method was delayed by invoking the super constructor with 'false' in order for the fields
 		// needed by 'getTableDefinitions' to be set
 		if (ALLOW_DATA_STRUCTURES_ASSERTION) {
-			log.reportEvent(IE_DATABASE_ADMINISTRATION_WARNING, DIP_MSG, "WARNING: executing delayed 'assureDataStructures' for '"+getClass().getName()+"'");
+			JDBCAdapterInstrumentationMethods.reportAdministrationWarningMessage("WARNING: executing delayed 'assureDataStructures' for '"+getClass().getName()+"'");
 			assureDataStructures();
 		}
 		
@@ -236,7 +231,7 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	                                                                      IJDBCAdapterParameterDefinition[] parametersListForInsertNewQueueElementQuery,
 	                                                                      int queueNumberOfWorkerThreads) throws SQLException {
 		
-		return new QueuesPostgreSQLAdapter(LOG, queueTableName, fieldsCreationLine, queueElementFieldList,
+		return new QueuesPostgreSQLAdapter(queueTableName, fieldsCreationLine, queueElementFieldList,
 		                                   parametersListForInsertNewQueueElementQuery, queueNumberOfWorkerThreads);
 	}
 }

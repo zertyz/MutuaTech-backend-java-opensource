@@ -3,6 +3,8 @@ package mutua.icc.instrumentation.handlers;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
@@ -20,15 +22,23 @@ import org.tukaani.xz.XZOutputStream;
 
 public class InstrumentationHandlerLogRotatoryCompressedFile extends InstrumentationHandlerLogRotatoryFile {
 
-	public InstrumentationHandlerLogRotatoryCompressedFile(String applicationName, String fsPathPrefix, String fsPathSuffix, int minimumLogLevel, int rotationFrequency) {
-		super(applicationName, fsPathPrefix, fsPathSuffix, minimumLogLevel, rotationFrequency);
+	public InstrumentationHandlerLogRotatoryCompressedFile(String applicationName, String fsPathPrefix, String fsPathSuffix, ELogSeverity minimumLogSeverity, int rotationFrequency) {
+		super(applicationName, fsPathPrefix, fsPathSuffix, minimumLogSeverity, rotationFrequency);
+
+//		// MOVO to Instrumentation on shutdown, close the stream -- this will compress & actually write any previously streamed bytes
+//		Runtime.getRuntime().addShutdownHook(new Thread() {
+//			public void run() {
+//				out.close();
+//				out = null;
+//			}
+//		});
 	}
 
 	@Override
 	public void closeOldAndOpenNewPrintStream(String fsFilePath) {
 		PrintStream newOut = null;
 		try {
-			FileOutputStream outFile = new FileOutputStream(fsFilePath);
+			FileOutputStream outFile = new FileOutputStream(fsFilePath, true);
 			XZOutputStream outXZ = new XZOutputStream(outFile, new LZMA2Options());
 			newOut = getPrintStream(outXZ);
 		} catch (Throwable t) {

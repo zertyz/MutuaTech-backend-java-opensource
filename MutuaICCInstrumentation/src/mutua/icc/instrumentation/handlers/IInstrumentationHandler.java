@@ -28,5 +28,8 @@ public interface IInstrumentationHandler {
 	
 	/** Event raised when a request is completed */
 	void onRequestFinish(InstrumentationEventDto requestFinishInstrumentationEvent);
+	
+	/** Event raised when the application is shutting down gracefully */
+	void close();
 
 }

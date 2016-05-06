@@ -17,19 +17,14 @@ import mutua.serialization.SerializationRepository;
 
 public class InstrumentableProperty {
 	
-	// property value flags
-	public static final int ABSOLUTE_VALUE    = 1;
-	public static final int INCREMENTAL_VALUE = 2;
-	
 	public final String   propertyName;
 	public final Class<?> propertyType;
-	public final int      valueFlags;
 	public final Method   serializationMethod;
 	
-	public InstrumentableProperty(String propertyName, Class<?> propertyType, int valueFlags) {
+	/** Constructs an instrumentable property representing the given type */
+	public InstrumentableProperty(String propertyName, Class<?> propertyType) {
 		this.propertyName        = propertyName;
 		this.propertyType        = propertyType;
-		this.valueFlags          = valueFlags;
 		this.serializationMethod = SerializationRepository.getSerializationMethod(propertyType);
 	}
 }

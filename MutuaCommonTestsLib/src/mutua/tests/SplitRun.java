@@ -74,11 +74,11 @@ public abstract class SplitRun extends Thread {
 			// keep track of the exception
 			int i = instances.indexOf(this);
 			exceptions.set(i, t);
-
-		}
-		running = false;
-		synchronized (this) {
-			notify();
+		} finally {
+			running = false;
+			synchronized (this) {
+				notify();
+			}
 		}
 	}
 	

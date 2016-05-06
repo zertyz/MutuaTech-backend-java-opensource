@@ -4,10 +4,12 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import static mutua.icc.instrumentation.DefaultInstrumentationEvents.*;
 import mutua.icc.configuration.annotations.ConfigurableElement;
-import mutua.icc.instrumentation.DefaultInstrumentationProperties;
 import mutua.icc.instrumentation.Instrumentation;
-import mutua.icc.instrumentation.pour.PourFactory.EInstrumentationDataPours;
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+import mutua.icc.instrumentation.handlers.IInstrumentationHandler;
+import mutua.icc.instrumentation.handlers.InstrumentationHandlerLogConsole;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -29,25 +31,25 @@ public class ConfigurationManagerTests {
 	
 	
 	private static String defaultValues;
+	
+	static {
+		IInstrumentationHandler log = new InstrumentationHandlerLogConsole("MutuaICCConfigurationTests", ELogSeverity.DEBUG);
+		Instrumentation.configureDefaultValuesForNewInstances(log, null, null);
+	}
 
 
 	@BeforeClass
 	public static void saveDefaultValues() throws IllegalArgumentException, IllegalAccessException {
-		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		ConfigurationManager cm = new ConfigurationManager(OneOfEachValueConfigurableClass.class);
 		defaultValues = cm.serializeConfigurableClasses();
 	}
 
 	@Before
 	public void resetDefaultValues() throws IllegalArgumentException, IllegalAccessException {
-		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		ConfigurationManager cm = new ConfigurationManager(OneOfEachValueConfigurableClass.class);
 		cm.deserializeConfigurableClasses(defaultValues);
 	}
 
-
-	private static Instrumentation<DefaultInstrumentationProperties, String> log = new Instrumentation<DefaultInstrumentationProperties, String>(
-			"MutuaICCConfigurationTests", DefaultInstrumentationProperties.DIP_MSG, EInstrumentationDataPours.CONSOLE, null);
-	
-	
 	private static void checkSerializationAndDeserialization(ConfigurationManager cm) throws IllegalArgumentException, IllegalAccessException {
 		String serializedFields = cm.serializeConfigurableClasses();
 		cm.deserializeConfigurableClasses(serializedFields);
@@ -70,13 +72,13 @@ public class ConfigurationManagerTests {
 	
 	@Test
 	public void testOneOfEachValueSerializationAndDesserializationClass() throws IllegalArgumentException, IllegalAccessException, IOException {
-		log.reportRequestStart("testSerializeConfigurationClass");
-		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		Instrumentation.startRequest(MSG_PROPERTY, "testSerializeConfigurationClass");
+		ConfigurationManager cm = new ConfigurationManager(OneOfEachValueConfigurableClass.class);
 		String serializedFields = cm.serializeConfigurableClasses();
 		System.out.println(serializedFields);
 		checkSerializationAndDeserialization(cm);
 		checkSaveAndLoadFromFile(cm);
-		log.reportRequestFinish();
+		Instrumentation.finishRequest();
 	}
 	
 	@ConfigurableElement("This is the shitty method's javadoc to demonstrate that configurable elements may get their comments elsewhere")
@@ -86,22 +88,22 @@ public class ConfigurationManagerTests {
 	
 	@Test
 	public void testConfigurationElementReference() throws IllegalArgumentException, IllegalAccessException, IOException {
-		log.reportRequestStart("testConfigurationElementReference");
-		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		Instrumentation.startRequest(MSG_PROPERTY, "testConfigurationElementReference");
+		ConfigurationManager cm = new ConfigurationManager(OneOfEachValueConfigurableClass.class);
 		String serializedFields = cm.serializeConfigurableClasses();
 		boolean isMethodRefenceDocumentationPresent  = serializedFields.matches("(?s).*shitty method.*");
 		boolean isFieldReferenceDocumentationPresent = serializedFields.matches("(?s).*Now with enums.*");
 		System.out.println(serializedFields);
 		assertTrue("Documentation reference to a method didn't work",      isMethodRefenceDocumentationPresent);
 		assertTrue("Documentation reference to a class field didn't work", isFieldReferenceDocumentationPresent);
-		log.reportRequestFinish();
-		shittyMethod();		// here just for you to hoover and see the javadoc through annotations
+		Instrumentation.finishRequest();
+		shittyMethod();		// here just for you to hover and see the javadoc through annotations
 	}
 	
 	@Test
 	public void testCommentedProperties() throws IllegalArgumentException, IllegalAccessException, IOException {
-		log.reportRequestStart("testCommentedProperties");
-		ConfigurationManager cm = new ConfigurationManager(log, OneOfEachValueConfigurableClass.class);
+		Instrumentation.startRequest(MSG_PROPERTY, "testCommentedProperties");
+		ConfigurationManager cm = new ConfigurationManager(OneOfEachValueConfigurableClass.class);
 		String serializedFields = cm.serializeConfigurableClasses();
 		// all these should be ignored by the parser:
 		String toBeIgnored = "#nicePlaces+=This one should not be loaded\n" +
@@ -116,7 +118,7 @@ public class ConfigurationManagerTests {
 		System.out.println(serializedFields);
 		checkDeserialization(cm, serializedFields);
 		checkSaveAndLoadFromFile(cm);
-		log.reportRequestFinish();
+		Instrumentation.finishRequest();
 	}
 	
 }

@@ -199,7 +199,7 @@ public abstract class DatabaseAlgorithmAnalysis {
 			SplitRun.runAndWaitForAll();
 		}
 		
-		resetTables();		
+		resetTables();
 		System.err.print("First Pass ( "); System.err.flush();
 		
 		// INSERTS (first pass)
@@ -324,6 +324,7 @@ public abstract class DatabaseAlgorithmAnalysis {
 			computeUpdateOrSelectAlgorithmAnalysis("Select", selectStart1, selectEnd1, selectStart2, selectEnd2, numberOfFirstPassSelectElements, numberOfSecondPassSelectElements, selects);
 		}
 		
+		resetTables();	// release some memory, when testing with RAM DAL
 	}
 	
 	public enum EAlgorithmComplexity {BetterThanO1, O1, Ologn, BetweenOLogNAndOn, On, WorseThanOn;

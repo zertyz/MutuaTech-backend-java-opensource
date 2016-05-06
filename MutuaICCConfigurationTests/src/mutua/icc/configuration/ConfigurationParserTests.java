@@ -3,7 +3,6 @@ package mutua.icc.configuration;
 import java.util.Arrays;
 
 import org.junit.Test;
-import org.junit.experimental.categories.Categories.ExcludeCategory;
 
 import static org.junit.Assert.*;
 

@@ -23,7 +23,6 @@ import adapters.IJDBCAdapterParameterDefinition;
  *
  * Test the behavior and caveats of the 'PostgreSQLQueueEventLink' 'IEventLink' implementation for event handling
  *
- * @see RelatedClass(es)
  * @version $Id$
  * @author luiz
  */
@@ -32,7 +31,6 @@ public class PostgreSQLQueueEventLinkTests {
 	
 	@Test
 	public void testDyingConsumersAndFallbackQueue() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		LOG.reportRequestStart("testDyingConsumersAndFallbackQueue");
 		String expectedMOPhone = "21991234899";
 		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
 		final String[] observedMOPhone = {""};
@@ -68,7 +66,7 @@ public class PostgreSQLQueueEventLinkTests {
 		}
 		
 		// wait for the events to be consumed
-		Thread.sleep(500);
+		Thread.sleep(1500);
 		
 		assertTrue("First event was not consumed", wasConsumed[0]);
 		assertEquals("Fallback elements should be present after processing failures", 10, link.popFallbackEventIds().length);
@@ -79,7 +77,6 @@ public class PostgreSQLQueueEventLinkTests {
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 		
 		Thread.sleep(500);		
-		LOG.reportRequestFinish();
 		link.stop();
 
 		assertEquals("No fallback elements should be present, since no other failure hapenned", 0, link.popFallbackEventIds().length);
@@ -93,7 +90,6 @@ public class PostgreSQLQueueEventLinkTests {
 
 	@Test
 	public void testAddToQueueAndConsumeFromIt() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		LOG.reportRequestStart("testAddToQueueAndConsumeFromIt");
 		String expectedMOPhone = "21991234899";
 		String expectedMOText  = "Let me see if it goes and get back like a boomerang...";
 		final String[] observedMOPhone = {""};
@@ -116,7 +112,6 @@ public class PostgreSQLQueueEventLinkTests {
 		eventServer.addToMOQueue(new MO(expectedMOPhone, expectedMOText));
 
 		Thread.sleep(100);		
-		LOG.reportRequestFinish();		
 		link.stop();
 		
 		assertEquals("Wrong 'phone' dequeued", expectedMOPhone, observedMOPhone[0]);
@@ -124,9 +119,7 @@ public class PostgreSQLQueueEventLinkTests {
 	}
 	
 	@Test
-	public void testAddSeveralItemsAndConsumeAllAtOnce() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		LOG.reportRequestStart("testAddSeveralItemsAndConsumeAllAtOnce");		
-		
+	public void testAddSeveralItemsAndConsumeAllAtOnce() throws SQLException, IndirectMethodNotFoundException, InterruptedException {		
 		PostgreSQLQueueEventLink<ETestAdditionalEventServices> link = new PostgreSQLQueueEventLink<ETestAdditionalEventServices>(ETestAdditionalEventServices.class, ANNOTATION_CLASSES, "SpecializedMOQueue", new SpecializedMOQueueDataBureau());
 		link.resetQueues();
 		final TestAdditionalEventServer eventServer = new TestAdditionalEventServer(link);
@@ -165,16 +158,15 @@ public class PostgreSQLQueueEventLinkTests {
 		// wait for the pending events to be dispatched
 		int attempts = 10;
 		while (link.hasPendingEvents()) {
-			Thread.sleep(1000/attempts);
 			attempts--;
 			if (attempts == 0) {
-				fail("pending events never got processed");
+				fail("pending events never got processed on time");
 //				System.err.println("pending events never got processed");
 //				break;
 			}
+			Thread.sleep(1000/attempts);
 		}
 
-		LOG.reportRequestFinish();
 		link.stop();
 		
 		assertEquals("Wrong number of elements consumed", expectedNumberOfEntries, observedNumberOfEntries[0]);
@@ -192,8 +184,6 @@ public class PostgreSQLQueueEventLinkTests {
 
 	@Test
 	public void testDeleteEvents() throws SQLException, IndirectMethodNotFoundException, InterruptedException {
-		LOG.reportRequestStart("testDeleteEvents");
-
 		SpecializedMOQueueDataBureau dataBureau = new SpecializedMOQueueDataBureau(); 
 		String queueTableName = "SpecializedMOQueue";
 		String queueElementFieldList = dataBureau.getQueueElementFieldList();
@@ -253,7 +243,6 @@ public class PostgreSQLQueueEventLinkTests {
 			}
 		}
 
-		LOG.reportRequestFinish();
 		link.stop();
 		
 		assertEquals("Wrong number of elements consumed", expectedNumberOfEntries, observedNumberOfEntries[0]);

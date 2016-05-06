@@ -196,18 +196,34 @@ public class SerializationRepository {
 	public static String serialize(Object object) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
 		return serialize(new StringBuffer(), object).toString();
 	}
-	
-	
+		
 	public static Method getSerializationMethod(Class<?> type) throws SecurityException {
-		try { return type.getMethod("toString", StringBuffer.class); } catch (NoSuchMethodException t) {}
-		try { return type.getMethod("toString");                     } catch (NoSuchMethodException t) {}
-		throw new RuntimeException("Could not find a serialization method for '"+type.getName()+"'");
+		Method method;
+		
+		// find the best efficient textual serialization method
+		// either 'public void toString(StringBuffer buffer);' or 'public static void toString(Object this, StringBuffer buffer);'
+		try {
+			method = type.getMethod("toString", StringBuffer.class);
+		} catch (NoSuchMethodException t1) {
+			try {
+				method = type.getMethod("toString", Object.class, StringBuffer.class);
+			} catch (NoSuchMethodException t2) {
+				// no special serialization method -- meaning the default 'toString()' will be called
+				return null;
+			}
+		}
+		
+		method.setAccessible(true);
+		return method;
 	}
 	
 	public static void invokeSerializationMethod(Method m, final StringBuffer buffer, Object object) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-		if ((m != null) && (m.getReturnType() == Void.TYPE)) {
+		if (m != null) try {
 			// call the pumped-up public void toString(StringBuffer buffer)
 			m.invoke(object, buffer);
+		} catch (IllegalArgumentException e) {
+			// try the static version instead -- to allow custom serialization --- for instance, of an Object[][] structure
+			m.invoke(null, object, buffer);
 		} else {
 			// call specific methods for native types
 			if (object instanceof String) {
@@ -233,7 +249,7 @@ public class SerializationRepository {
 				buffer.append('\'').append(((Class<?>)object).getName()).append('\'');
 			} else {
 				// call the original 'public String toString()'
-				buffer.append(m.invoke(object, (Object[])null));
+				buffer.append(object);
 			}
 		}
 	}

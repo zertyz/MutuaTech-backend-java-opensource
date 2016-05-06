@@ -4,6 +4,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.UnsupportedEncodingException;
 
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
+
 /** <pre>
  * InstrumentationHandlerLogPlainFile.java
  * =======================================
@@ -17,8 +19,8 @@ import java.io.UnsupportedEncodingException;
 
 public class InstrumentationHandlerLogPlainFile extends InstrumentationHandlerLogPrintStream {
 
-	public InstrumentationHandlerLogPlainFile(String applicationName, String fsFilePath, int minimumLogLevel) throws UnsupportedEncodingException, FileNotFoundException {
-		super(applicationName, new FileOutputStream(fsFilePath, true), minimumLogLevel);
+	public InstrumentationHandlerLogPlainFile(String applicationName, String fsFilePath, ELogSeverity minimumLogSeverity) throws UnsupportedEncodingException, FileNotFoundException {
+		super(applicationName, new FileOutputStream(fsFilePath, true), minimumLogSeverity);
 	}
 
 }

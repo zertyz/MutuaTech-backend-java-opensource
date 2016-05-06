@@ -1,10 +1,10 @@
 package mutua.icc.instrumentation;
 
-import mutua.icc.instrumentation.handlers.InstrumentationHandlerLogPrintStream;
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
 
 /** <pre>
- * InstrumentationMethods.java
- * ===========================
+ * TestInstrumentationMethods.java
+ * ===============================
  * (created by luiz, Apr 22, 2016)
  *
  * Experimentational class for the new Instrumentation Architecture
@@ -13,7 +13,7 @@ import mutua.icc.instrumentation.handlers.InstrumentationHandlerLogPrintStream;
  * @author luiz
 */
 
-public class InstrumentationMethods {
+public class TestInstrumentationMethods {
 	
 	// log, report
 	
@@ -52,24 +52,50 @@ public class InstrumentationMethods {
 //	}
 	
 	// 'InstrumentableEvent's
-	private static final InstrumentableEvent noPropEvent  = new InstrumentableEvent("NOPROP",  InstrumentationHandlerLogPrintStream.DEBUG,    InstrumentationHandlerLogPrintStream.class); 
-	private static final InstrumentableEvent onePropEvent = new InstrumentableEvent("ONEPROP", InstrumentationHandlerLogPrintStream.INFO,     InstrumentationHandlerLogPrintStream.class); 
-	private static final InstrumentableEvent twoPropEvent = new InstrumentableEvent("TWOPROP", InstrumentationHandlerLogPrintStream.CRITICAL, InstrumentationHandlerLogPrintStream.class);
+	/////////////////////////
+
+	// ... for the log handler tests
+	public static final InstrumentableEvent debugEvent    = new InstrumentableEvent("DEBUG_EVENT_NAME",    ELogSeverity.DEBUG);
+	public static final InstrumentableEvent cryptEvent    = new InstrumentableEvent("CRYPT_EVENT_NAME",    ELogSeverity.CRYPT);
+	public static final InstrumentableEvent infoEvent     = new InstrumentableEvent("INFO_EVENT_NAME",     ELogSeverity.INFO);
+	public static final InstrumentableEvent criticalEvent = new InstrumentableEvent("CRITICAL_EVENT_NAME", ELogSeverity.CRITICAL);
+	public static final InstrumentableEvent errorEvent    = new InstrumentableEvent("ERROR_EVENT_NAME",    ELogSeverity.ERROR);
+
+	// ... for the instrumentation tests
+	public static final InstrumentableEvent noPropEvent  = new InstrumentableEvent("NOPROP",  ELogSeverity.DEBUG); 
+	public static final InstrumentableEvent onePropEvent = new InstrumentableEvent("ONEPROP", ELogSeverity.INFO); 
+	public static final InstrumentableEvent twoPropEvent = new InstrumentableEvent("TWOPROP", ELogSeverity.CRITICAL);
 	
 	// 'InstrumentableProperty'ies
-	private static final InstrumentableProperty dayOfWeekProperty = new InstrumentableProperty("prop1", String.class,  InstrumentableProperty.ABSOLUTE_VALUE);
-	private static final InstrumentableProperty mailProperty      = new InstrumentableProperty("prop2", Integer.class, InstrumentableProperty.INCREMENTAL_VALUE);
+	//////////////////////////////
+	
+	// ... for the log handler tests
+	public static final InstrumentableProperty messageProperty = new InstrumentableProperty("msg", String.class);
+
+	// ... for the instrumentation tests
+	public static final InstrumentableProperty requestProperty   = new InstrumentableProperty("testName", String.class);
+	public static final InstrumentableProperty dayOfWeekProperty = new InstrumentableProperty("prop1",    String.class);
+	public static final InstrumentableProperty mailProperty      = new InstrumentableProperty("prop2",    TestType.class);
+
+	
+	public static void startTestRequest(String testName) {
+		Instrumentation.startRequest(requestProperty, testName);
+	}
+	
+	public static void finishTestRequest() {
+		Instrumentation.finishRequest();
+	}
 	
 	public static void NOPROP_EVENT() {
-		Instrumentation.logAndCompute(noPropEvent);
+		Instrumentation.logProfileAndCompute(noPropEvent);
 	}
 	
 	public static void ONEPROP_EVENT(String dayOfWeek) {
-		Instrumentation.logAndCompute(onePropEvent, dayOfWeekProperty, dayOfWeek);
+		Instrumentation.logProfileAndCompute(onePropEvent, dayOfWeekProperty, dayOfWeek);
 	}
 	
 	public static void TWOPROP_EVENT(String dayOfWeek, TestType mail) {
-		Instrumentation.justLog(twoPropEvent, dayOfWeekProperty, dayOfWeek, mailProperty, mail);
+		Instrumentation.logAndProfile(twoPropEvent, dayOfWeekProperty, dayOfWeek, mailProperty, mail);
 	}
 
 }

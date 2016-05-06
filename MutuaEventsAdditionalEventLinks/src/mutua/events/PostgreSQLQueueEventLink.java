@@ -1,7 +1,6 @@
 package mutua.events;
 
-import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationEvents.*;
-import static mutua.icc.instrumentation.MutuaEventAdditionalEventLinksInstrumentationProperties.*;
+import static mutua.events.AdditionalEventLinksInstrumentationMethods.*;
 
 import java.lang.annotation.Annotation;
 import java.sql.SQLException;
@@ -32,8 +31,6 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	// Mutua Configurable Class pattern
 	///////////////////////////////////
 	
-	private static Instrumentation<?, ?> LOG;
-	
 	/** The amount of milliseconds the PostgreSQLQueueEventLink ConsumerDispatcher thread should wait between queries for new " +
 	 *  "queue entries to process. Set to 0 to rely on the internal notification mechanisms and only when queue producers and " +
 	 *  "consumers are running on the same machine and on the same process. */
@@ -46,8 +43,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	/** method to be called when attempting to configure the default behavior for new instances of 'PostgreSQLQueueEventLink'.<pre>
 	 *  @param queuePoolingTime             if < 0, the default value won't be touched
 	 *  @param queueNumberOfWorkerThreads   if <= 0, the default value won't be touched */
-	public static void configureDefaultValuesForNewInstances(Instrumentation<?, ?> log, long queuePoolingTime, int queueNumberOfWorkerThreads) {		
-			LOG                            = log;
+	public static void configureDefaultValuesForNewInstances(long queuePoolingTime, int queueNumberOfWorkerThreads) {		
 			QUEUE_POOLING_TIME             = queuePoolingTime           >= 0 ? queuePoolingTime           : QUEUE_POOLING_TIME;
 			QUEUE_NUMBER_OF_WORKER_THREADS = queueNumberOfWorkerThreads >  0 ? queueNumberOfWorkerThreads : QUEUE_NUMBER_OF_WORKER_THREADS;;
 	}
@@ -56,7 +52,6 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	/** Designed to be run by a single thread, this class fetches the database and assigns work for instances of 'ConsumerWorker' */
 	class ConsumerDispatcher extends Thread {
 		
-		private final Instrumentation<?, ?> log;
 		private final long queuePoolingTime;
 		private final int  maxFetchableEvents;
 		private final Class<?> eventsEnumeration;
@@ -65,8 +60,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		public boolean processing = false;
 		public boolean hasUnfetchedElements = false;	// for the internal notification mechanism, when 'QUEUE_POOLING_TIME' is 0
 		
-		public ConsumerDispatcher(Instrumentation<?, ?> log, long queuePoolingTime, int maxFetchableEvents, Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
-			this.log                = log;
+		public ConsumerDispatcher(long queuePoolingTime, int maxFetchableEvents, Class<?> eventsEnumeration, QueuesPostgreSQLAdapter dba) {
 			this.queuePoolingTime   = queuePoolingTime;
 			this.maxFetchableEvents = maxFetchableEvents;
 			this.eventsEnumeration  = eventsEnumeration;
@@ -116,13 +110,13 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 						// The whole logic of the event fetching on this algorithm depends on the ascending sort of the eventIds returned by 'FetchNextQueueElements' 
 						if ((lastDispatchedEventId != -1) && ((eventId - lastDispatchedEventId) > 1))  {
 							if (lastReentrancyFailureEventId != eventId) {
-								log.reportDebug("REENTRANCY PROBLEM: eventId(s) between "+lastDispatchedEventId+" and "+eventId+" is(are) missing. Attempting to rerun the query in 1000ms...");
+								reportDatabaseQueueInfo("REENTRANCY PROBLEM: eventId(s) between "+lastDispatchedEventId+" and "+eventId+" is(are) missing. Attempting to rerun the query in 1000ms...", queueTableName);
 								hasUnfetchedElements = true;
 								sleep(1000);		// sleep a reasonable time to be sure the problematic INSERT has finished
 								lastReentrancyFailureEventId = eventId;
 								break;
 							} else {
-								log.reportDebug("REENTRANCY PROBLEM DISMISSED: It seems someone deleted eventId(s) between "+lastDispatchedEventId+" and "+eventId+". Skipping the missing ones...");
+								reportDatabaseQueueInfo("REENTRANCY PROBLEM DISMISSED: It seems someone deleted eventId(s) between "+lastDispatchedEventId+" and "+eventId+". Skipping the missing ones...", queueTableName);
 							}
 						}
 
@@ -139,7 +133,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 						dba.invokeUpdateProcedure(dba.UpdateLastFetchedEventId, LAST_FETCHED_EVENT_ID, dbRegisteredLastFetchedEventId);
 					}
 				} catch (Throwable t) {
-					log.reportThrowable(t, "Exception on ConsumerDispatcher thread");
+					Instrumentation.reportThrowable(t, "Exception on ConsumerDispatcher thread");
 				}
 				
 				// wait for a new element or proceed right away?
@@ -149,12 +143,12 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 						if (hasUnfetchedElements) {
 							continue;
 						} else {
-							log.reportDebug("PostgreSQLQueueEventLink: No new elements by now on queue '"+queueTableName+"'. Waiting for" + (queuePoolingTime == 0 ? "ever" : " "+queuePoolingTime+"ms... or") + " until a new one arrives");
+							Instrumentation.reportDebug("PostgreSQLQueueEventLink: No new elements by now on queue '"+queueTableName+"'. Waiting for" + (queuePoolingTime == 0 ? "ever" : " "+queuePoolingTime+"ms... or") + " until a new one arrives");
 							processing = false;
 							try {
 								wait(queuePoolingTime);
 							} catch (InterruptedException e) {}
-							log.reportDebug("PostgreSQLQueueEventLink: resume fetching...");
+							Instrumentation.reportDebug("PostgreSQLQueueEventLink: resume fetching...");
 							processing = true;
 						}
 					}
@@ -166,7 +160,6 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	}
 	
 	
-	private   final Instrumentation<?, ?>                                log;
 	protected final QueuesPostgreSQLAdapter                              dba;
 	private   final QueueEventLink<SERVICE_EVENTS_ENUMERATION>           localEventDispatchingQueue;
 	protected final String                                               queueTableName;
@@ -178,7 +171,6 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	public PostgreSQLQueueEventLink(Class<SERVICE_EVENTS_ENUMERATION> eventsEnumeration, Class<? extends Annotation>[] annotationClasses, 
 	                                final String queueTableName, final IDatabaseQueueDataBureau<SERVICE_EVENTS_ENUMERATION> dataBureau) throws SQLException {
 		super(eventsEnumeration, ANNOTATION_CLASSES);
-		this.log = LOG;
 		this.queueTableName = queueTableName;
 		this.dataBureau = dataBureau;
 		dba = QueuesPostgreSQLAdapter.getQueuesDBAdapter(eventsEnumeration, queueTableName, dataBureau.getFieldsCreationLine(),
@@ -192,13 +184,13 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			@Override
 			// this 'QueueEventLink' adds to the fallback queue whenever the consumpsion of an element generates an uncought exception
 			public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
-				log.reportThrowable(t, "Error consuming event '"+event.toString()+"' from the queue '"+queueTableName+"'. Adding it to the fallback queue...");
+				Instrumentation.reportThrowable(t, "Error consuming event '"+event.toString()+"' from the queue '"+queueTableName+"'. Adding it to the fallback queue...");
 				try {
 					// TODO 'pushFallback' should receive the 'eventId', shouldn't it?
 					Object[] rowParameters = dataBureau.serializeQueueEntry(event);
 					dba.invokeUpdateProcedure(dba.InsertIntoFallbackQueue, rowParameters);
 				} catch (Throwable e) {
-					log.reportThrowable(e, "Error adding event '"+event.toString()+"' to the fallback queue '"+queueTableName+"Fallback'");
+					Instrumentation.reportThrowable(e, "Error adding event '"+event.toString()+"' to the fallback queue '"+queueTableName+"Fallback'");
 				}
 			}
 		};
@@ -206,7 +198,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		localEventDispatchingQueue.clientsAndListenerMethodInvokers = clientsAndListenerMethodInvokers;
 		
 		// start the consumers dispatch manager thread
-		cdThread = new ConsumerDispatcher(log, QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS, eventsEnumeration, dba);
+		cdThread = new ConsumerDispatcher(QUEUE_POOLING_TIME, QUEUE_NUMBER_OF_WORKER_THREADS, eventsEnumeration, dba);
 		cdThread.start();
 	}
 
@@ -236,7 +228,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			return eventId;
 			
 		} catch (Throwable t) {
-			log.reportThrowable(t, "Error while attempting to insert PostgreSQL queue element");
+			Instrumentation.reportThrowable(t, "Error while attempting to insert PostgreSQL queue element");
 			return -1;
 		}
 	}
@@ -262,12 +254,12 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 			}
 			return updatedRows;
 		} catch (Throwable t) {
-			log.reportThrowable(t, "Error while attempting to batch insert PostgreSQL queue elements");
+			Instrumentation.reportThrowable(t, "Error while attempting to batch insert PostgreSQL queue elements");
 			if (t instanceof SQLException) {
 				int c = 2;
 				SQLException e = (SQLException)t;
 				while ((e = e.getNextException()) != null) {
-					log.reportThrowable(e, "getNextException #"+(c++));
+					Instrumentation.reportThrowable(e, "getNextException #"+(c++));
 				}
 			}
 			return null;
@@ -286,7 +278,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	
 	private void waitForConsumers() {
 		for (int i=0; (i<10) && cdThread.processing; i++) {
-			log.reportEvent(IE_WAITING_CONSUMERS);
+			reportDatabaseQueueInfo("There are consumers still processing events. Waiting...", queueTableName);
 			try {Thread.sleep(1000);} catch (InterruptedException e) {}
 		}
 	}
@@ -303,17 +295,17 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 	}
 	
 	public void stop() {
-		log.reportEvent(IE_INTERRUPTING, IP_QUEUE_TABLE_NAME, queueTableName);
+		reportDatabaseQueueInfo("Interrupting PostgreSQL Queue Manager...", queueTableName);
 		synchronized (cdThread) {
 			cdThread.stop  = true;
 			cdThread.notify();
 		}
 		waitForConsumers();
 		if (cdThread.processing) {
-			log.reportEvent(IE_FORCING_CONSUMERS_SHUTDOWN);
+			reportDatabaseQueueInfo("Consumers are still processing events after the stop command. Forcing the interruption...", queueTableName);
 		}
 		cdThread.interrupt();
-		log.reportEvent(IE_INTERRUPTION_COMPLETE, IP_QUEUE_TABLE_NAME, queueTableName);
+		reportDatabaseQueueInfo("Interruption of PostgreSQL QueueManager complete", queueTableName);
 	}
 	
 	/** Returns any 'eventIds' that could not be processed and are on the fallback queue. When this method is called, the fallback queue is

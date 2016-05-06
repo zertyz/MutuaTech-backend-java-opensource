@@ -21,7 +21,7 @@ import mutua.imi.IndirectMethodNotFoundException;
 
 public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVICE_EVENTS_ENUMERATION> {
 	
-	// TODO redesign of MutuaEvents -- please refactor the .run methods above against the 'DirectEventLink' counterparts
+	// TODO redesign of MutuaEvents -- please refactor the .run methods below against the 'DirectEventLink' counterparts
 	class ConsumerWorker extends Thread {
 		
 		private QueueEventLink<SERVICE_EVENTS_ENUMERATION> queueEventLink;
@@ -41,15 +41,15 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 				while (consumerMethodInvoker == null) {
 					// do nothing if there are no consumers -- 'addConsumer' notifies when a consumer client arrives
 					synchronized (queueEventLink) {
-						System.out.println("QueueEventLink ConsumerWorker: no consumer client registered yet. Waiting...");
+//System.out.println("QueueEventLink ConsumerWorker: no consumer client registered yet. Waiting...");
 						queueEventLink.wait();
-						System.out.println("QueueEventLink ConsumerWorker: Waking up, since we got a notification that a consumer client is now available!");
+//System.out.println("QueueEventLink ConsumerWorker: Waking up, since we got a notification that a consumer client is now available!");
 					}
 				}
 				consumerMethodInvoker.invokeMethod(event);
 					
 			} catch (Throwable t) {
-				t.printStackTrace();
+//t.printStackTrace();
 				if (event != null) {
 					queueEventLink.pushFallback(event, t);
 				}
@@ -70,6 +70,7 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 						// nothing to do -- there is no problema if no one is listening
 					}
 				} catch (InterruptedException e) {
+					// TODO call pushFallback, just like the consumerWorker above do
 					e.printStackTrace();
 				}
 			}
@@ -101,7 +102,7 @@ public class QueueEventLink<SERVICE_EVENTS_ENUMERATION> extends	IEventLink<SERVI
 
 	/** Method called for events that could not be processed (threw an exception). Override to make it actually do something -- i.e., add to a fallback list */
 	public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
-		System.out.println("QueueEventLink: A consumer method generated an uncouth exception");
+		System.out.println("QueueEventLink: A consumer or listener method generated an uncouth exception");
 		t.printStackTrace();
 	}
 

@@ -4,6 +4,7 @@ import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
 import mutua.icc.instrumentation.dto.InstrumentationEventDto;
 
 /** <pre>
@@ -27,10 +28,10 @@ public abstract class InstrumentationHandlerLogRotatoryFile extends Instrumentat
 	private final int    rotationFrequency;
 	private final String fsFilePathPrefix;
 	private final String fsFilePathSuffix;
-	private       long   nextRorationMillis;
+	protected     long   nextRorationMillis;
 
-	public InstrumentationHandlerLogRotatoryFile(String applicationName, String fsFilePathPrefix, String fsFilePathSuffix, int minimumLogLevel, int rotationFrequency) {
-		super(applicationName, System.out, minimumLogLevel);
+	public InstrumentationHandlerLogRotatoryFile(String applicationName, String fsFilePathPrefix, String fsFilePathSuffix, ELogSeverity minimumLogSeverity, int rotationFrequency) {
+		super(applicationName, System.out, minimumLogSeverity);
 		this.rotationFrequency = rotationFrequency;
 		this.fsFilePathPrefix = fsFilePathPrefix;
 		this.fsFilePathSuffix = fsFilePathSuffix;
