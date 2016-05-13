@@ -34,10 +34,10 @@ public class Instrumentation {
 		// hooks setting
 		////////////////
 		
-		// set the VM default uncought exception handler
+		// set the VM default uncaught exception handler
 		UncaughtExceptionHandler ueh = new UncaughtExceptionHandler() {		
 			public void uncaughtException(Thread t, Throwable e) {
-				justLog(UNCOUGHT_EXCEPTION_EVENT, MSG_PROPERTY, "Uncought Exception detected by Instrumentation facility", THROWABLE_PROPERTY, e);
+				justLog(UNCAUGHT_EXCEPTION_EVENT, MSG_PROPERTY, "Uncought Exception detected by Instrumentation facility", THROWABLE_PROPERTY, e);
 			}
 		};
 		Thread.setDefaultUncaughtExceptionHandler(ueh);
@@ -324,8 +324,8 @@ public class Instrumentation {
 		justLog(REPORTED_THROWABLE_EVENT, MSG_PROPERTY, msg, THROWABLE_PROPERTY, t);
 	}
 	
-	public static void reportUncoughtThrowable(Throwable t, String msg) {
-		justLog(UNCOUGHT_EXCEPTION_EVENT, MSG_PROPERTY, msg, THROWABLE_PROPERTY, t);
+	public static void reportUncaughtThrowable(Throwable t, String msg) {
+		justLog(UNCAUGHT_EXCEPTION_EVENT, MSG_PROPERTY, msg, THROWABLE_PROPERTY, t);
 	}
 	
 }

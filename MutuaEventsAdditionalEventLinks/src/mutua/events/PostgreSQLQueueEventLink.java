@@ -182,7 +182,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		int localEventDispatchingQueueCapacity = 2*QUEUE_NUMBER_OF_WORKER_THREADS;
 		localEventDispatchingQueue = new QueueEventLink<SERVICE_EVENTS_ENUMERATION>(eventsEnumeration, annotationClasses, localEventDispatchingQueueCapacity, QUEUE_NUMBER_OF_WORKER_THREADS) {
 			@Override
-			// this 'QueueEventLink' adds to the fallback queue whenever the consumpsion of an element generates an uncought exception
+			// this 'QueueEventLink' adds to the fallback queue whenever the consumpsion of an element generates an uncaught exception
 			public void pushFallback(IndirectMethodInvocationInfo<SERVICE_EVENTS_ENUMERATION> event, Throwable t) {
 				Instrumentation.reportThrowable(t, "Error consuming event '"+event.toString()+"' from the queue '"+queueTableName+"'. Adding it to the fallback queue...");
 				try {

@@ -32,7 +32,7 @@ public class InstrumentableEvent {
 	
 	public enum EComputability {
 		/** For events that, when happen, mean an increase of '1' on the amount computed by the reports generation facility */
-		HIT,
+		COUNT,
 		/** For events that, when happen, mean an increase of 'n' on the amount computed by the reports generation facility. 'n' is specified as an {@link InstrumentableProperty} on the constructor */
 		INCREMENTAL_VALUE,
 		/** For events that, when happen, mean setting to 'n' the amount computed by the reports generation facility. 'n' is specified as an {@link InstrumentableProperty} on the constructor */
@@ -59,14 +59,14 @@ public class InstrumentableEvent {
 		this(eventName, logSeverity, EComputability.NOT_COMPUTABLE, null, (InstrumentableProperty[])null);
 	}
 	
-	/** Creates an 'InstrumentableEvent' meant to be used to compute {@link EComputability#HIT} information for later reports generation */
+	/** Creates an 'InstrumentableEvent' meant to be used to compute {@link EComputability#COUNT} information for later reports generation */
 	public InstrumentableEvent(String eventName, InstrumentableProperty... computableIndexProperties) {
-		this(eventName, ELogSeverity.DEBUG, EComputability.HIT, null, computableIndexProperties);
+		this(eventName, ELogSeverity.DEBUG, EComputability.COUNT, null, computableIndexProperties);
 	}
 	
 	/** Mix between constructors {@link #InstrumentableEvent(String, ELogSeverity)} and {@link #InstrumentableEvent(String, InstrumentableProperty...)} */
 	public InstrumentableEvent(String eventName, ELogSeverity logSeverity, InstrumentableProperty... computableIndexProperties) {
-		this(eventName, logSeverity, EComputability.HIT, null, computableIndexProperties);
+		this(eventName, logSeverity, EComputability.COUNT, null, computableIndexProperties);
 	}	
 
 	/** Creates an 'InstrumentableEvent' meant to be used to compute INCREMENTAL, ABSOLUTE or AVERAGE {@link EComputability} information for later reports generation */

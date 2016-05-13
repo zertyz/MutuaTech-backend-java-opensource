@@ -23,7 +23,7 @@ public class DefaultInstrumentationEvents {
 	public static final InstrumentableEvent APP_SHUTDOWN_EVENT;
 	public static final InstrumentableEvent REQUEST_START_EVENT;
 	public static final InstrumentableEvent REQUEST_FINISH_EVENT;
-	public static final InstrumentableEvent UNCOUGHT_EXCEPTION_EVENT;
+	public static final InstrumentableEvent UNCAUGHT_EXCEPTION_EVENT;
 	public static final InstrumentableEvent REPORTED_THROWABLE_EVENT;
 	public static final InstrumentableEvent DEBUG_EVENT;
 
@@ -32,6 +32,7 @@ public class DefaultInstrumentationEvents {
 	
 	// ... 'Profile' event handler internal events
 	public static final InstrumentableEvent PROFILED_REQUEST_EVENT;
+	public static final InstrumentableEvent TIMEDOUT_REQUEST_EVENT;
 	
 	// 'InstrumentableProperty'ies
 	//////////////////////////////
@@ -48,14 +49,15 @@ public class DefaultInstrumentationEvents {
 		APP_START_EVENT          = new InstrumentableEvent("APP_START",          ELogSeverity.CRITICAL);
 		APP_SHUTDOWN_EVENT       = new InstrumentableEvent("APP_SHUTDOWN",       ELogSeverity.CRITICAL);
 		REQUEST_START_EVENT      = new InstrumentableEvent("REQUEST START",      ELogSeverity.CRITICAL);
-		REQUEST_FINISH_EVENT     = new InstrumentableEvent("REQUEST FINISH",     ELogSeverity.CRITICAL);
-		UNCOUGHT_EXCEPTION_EVENT = new InstrumentableEvent("UNCOUGHT_EXCEPTION", ELogSeverity.ERROR,    THROWABLE_PROPERTY);
+		REQUEST_FINISH_EVENT     = new InstrumentableEvent("REQUEST FINISH",     ELogSeverity.INFO);
+		UNCAUGHT_EXCEPTION_EVENT = new InstrumentableEvent("UNCOUGHT_EXCEPTION", ELogSeverity.ERROR,    THROWABLE_PROPERTY);
 		REPORTED_THROWABLE_EVENT = new InstrumentableEvent("REPORTED_THROWABLE", ELogSeverity.ERROR,    THROWABLE_PROPERTY);
 		DEBUG_EVENT              = new InstrumentableEvent("DEBUG",              ELogSeverity.DEBUG);
 
 		UNFINISHED_REQUEST_EVENT = new InstrumentableEvent("UNFINISHED REQUEST", ELogSeverity.ERROR,    (InstrumentableProperty[])null);
 		
 		PROFILED_REQUEST_EVENT   = new InstrumentableEvent("PROFILED REQUEST",   ELogSeverity.INFO);
+		TIMEDOUT_REQUEST_EVENT   = new InstrumentableEvent("TIMED OUT REQUEST",  ELogSeverity.INFO);
 
 	}
 	

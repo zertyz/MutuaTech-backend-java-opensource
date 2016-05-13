@@ -55,11 +55,11 @@ public class InstrumentationTests {
 	}
 	
 	@Test
-	public void uncoughtExceptionTest() {
+	public void uncaughtExceptionTest() {
 		new Thread() {
 			@Override
 			public void run() {
-				startTestRequest("uncoughtExceptionTest");
+				startTestRequest("uncaughtExceptionTest");
 				throw new RuntimeException("there is no explicit try/catch for this one. It should be caught by the instrumentation facility though");
 			}
 			
