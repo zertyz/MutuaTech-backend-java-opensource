@@ -62,6 +62,11 @@ public class SerializationTests {
 		
 		// just a sanity check
 		assertEquals("Something is wrong. I am not sane...", originalString, SerializationRepository.deserialize(SerializationRepository.serialize(originalString)));
+		
+		// null test
+		b.setLength(0);
+		SerializationRepository.invokeSerializationMethod(m, b, null);
+		assertEquals("Serializing with a null object results are wrong", "NULL", b.toString());
 	}
 	
 	/***********************

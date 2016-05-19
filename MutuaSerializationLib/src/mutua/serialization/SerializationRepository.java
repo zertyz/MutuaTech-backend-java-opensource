@@ -218,7 +218,9 @@ public class SerializationRepository {
 	}
 	
 	public static void invokeSerializationMethod(Method m, final StringBuffer buffer, Object object) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-		if (m != null) try {
+		if (object == null) {
+			buffer.append("NULL");
+		} else if (m != null) try {
 			// call the pumped-up public void toString(StringBuffer buffer)
 			m.invoke(object, buffer);
 		} catch (IllegalArgumentException e) {
