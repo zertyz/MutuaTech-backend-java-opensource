@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 public @interface ConfigurableElement {
 
 	/** This should be specified when declaring a new configuration property */
-	String value() default "";
+	String[] value() default {};
 
 	/** This should be specified when declaring an existing configuration property.
 	 *  sameAs := "package.className.publicStaticFieldName"

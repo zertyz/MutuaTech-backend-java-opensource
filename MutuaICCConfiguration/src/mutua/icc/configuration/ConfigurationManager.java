@@ -51,8 +51,8 @@ public class ConfigurationManager {
 			if (configurableAnnotation == null) {
 				continue;
 			}
-			String comment = configurableAnnotation.value();
-			if (comment.equals("")) {
+			String[] comments = configurableAnnotation.value();
+			if (comments.length == 0) {
 				String commentReferenceField   = configurableAnnotation.sameAs();
 				String commentReferenceMethod  = configurableAnnotation.sameAsMethod();
 				if (!commentReferenceField.equals("")) {
@@ -63,9 +63,9 @@ public class ConfigurationManager {
 						Class<?> referencedClass = Class.forName(className);
 						Field referencedField = referencedClass.getField(fieldName);
 						ConfigurableElement referencedConfigurableAnnotation = referencedField.getAnnotation(ConfigurableElement.class);
-						comment = referencedConfigurableAnnotation.value();
+						comments = referencedConfigurableAnnotation.value();
 					} catch (Throwable t) {t.printStackTrace();
-						comment = "same as field '"+commentReferenceField+"' (reference not found) -- "+t.getMessage();
+						comments = new String[] {"same as field '"+commentReferenceField+"' (reference not found) -- "+t.getMessage()};
 					}
 				} else if (!commentReferenceMethod.equals("")) {
 					String className  = commentReferenceMethod.replaceAll("(.*)\\.(.*)", "$1");
@@ -77,17 +77,19 @@ public class ConfigurationManager {
 							if (referencedMethod.getName().equals(methodName)) {
 								ConfigurableElement referencedConfigurableAnnotation = referencedMethod.getAnnotation(ConfigurableElement.class);
 								if (referencedConfigurableAnnotation != null) {
-									comment = referencedConfigurableAnnotation.value();
+									comments = referencedConfigurableAnnotation.value();
 									break;
 								}
 							}
 						}
 					} catch (Throwable t) {
-						comment = "same as method '"+commentReferenceMethod+"' (reference not found)";
+						comments = new String[] {"same as method '"+commentReferenceMethod+"' (reference not found)"};
 					}
 				}
 			}
-			buffer.append("# ").append(comment).append('\n');
+			for (String comment : comments) {
+				buffer.append("# ").append(comment).append('\n');
+			}
 			String fName   = f.getName();
 			Object fValue  = f.get(null);
 			Class<?> fType = f.getType();
