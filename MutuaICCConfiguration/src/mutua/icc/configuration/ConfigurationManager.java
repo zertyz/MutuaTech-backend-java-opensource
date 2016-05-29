@@ -120,7 +120,10 @@ public class ConfigurationManager {
 					}
 					buffer.append(enumConstant.toString());
 				}
-				buffer.append(")\n").append(fName).append('=').append(fValue.toString()).append('\n');
+				if (fValue == null) {
+					Instrumentation.reportDebug("WARNING while serializing '"+configurableClass.getCanonicalName()+"': field '"+fName+"' is null");
+				}
+				buffer.append(")\n").append(fName).append('=').append(fValue).append('\n');
 			} else if (fType.isArray() && fType.getComponentType().isEnum()) {
 				// add to the comment line
 				buffer.deleteCharAt(buffer.length()-1);
