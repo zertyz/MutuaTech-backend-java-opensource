@@ -226,8 +226,7 @@ public final class QueuesPostgreSQLAdapter extends PostgreSQLAdapter {
 	/////////////////
 		
 	/** Gets a JDBCAdapter instance to manage PostgreSQL queues. For advanced instance options, please see {@link #configureQueuesDatabaseModule} */
-	public synchronized static QueuesPostgreSQLAdapter getQueuesDBAdapter(Class<?> eventsEnumeration, String queueTableName, String fieldsCreationLine,
-	                                                                      String queueElementFieldList,
+	public synchronized static QueuesPostgreSQLAdapter getQueuesDBAdapter(String queueTableName, String fieldsCreationLine, String queueElementFieldList,
 	                                                                      IJDBCAdapterParameterDefinition[] parametersListForInsertNewQueueElementQuery,
 	                                                                      int queueNumberOfWorkerThreads) throws SQLException {
 		

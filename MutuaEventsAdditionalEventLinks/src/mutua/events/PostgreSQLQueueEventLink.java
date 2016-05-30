@@ -173,8 +173,7 @@ public class PostgreSQLQueueEventLink<SERVICE_EVENTS_ENUMERATION> extends IEvent
 		super(eventsEnumeration, ANNOTATION_CLASSES);
 		this.queueTableName = queueTableName;
 		this.dataBureau = dataBureau;
-		dba = QueuesPostgreSQLAdapter.getQueuesDBAdapter(eventsEnumeration, queueTableName, dataBureau.getFieldsCreationLine(),
-		                                                 dataBureau.getQueueElementFieldList(),
+		dba = QueuesPostgreSQLAdapter.getQueuesDBAdapter(queueTableName, dataBureau.getFieldsCreationLine(), dataBureau.getQueueElementFieldList(),
 		                                                 dataBureau.getParametersListForInsertNewQueueElementQuery(),
 		                                                 QUEUE_NUMBER_OF_WORKER_THREADS);
 		

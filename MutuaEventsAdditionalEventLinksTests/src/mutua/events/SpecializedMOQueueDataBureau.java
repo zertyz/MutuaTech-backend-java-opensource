@@ -18,7 +18,7 @@ import adapters.IJDBCAdapterParameterDefinition;
 
 public class SpecializedMOQueueDataBureau extends IDatabaseQueueDataBureau<ETestAdditionalEventServices> {
 
-	enum SpecializedMOParameters implements IJDBCAdapterParameterDefinition {
+	public enum SpecializedMOParameters implements IJDBCAdapterParameterDefinition {
 
 		PHONE,
 		TEXT;
