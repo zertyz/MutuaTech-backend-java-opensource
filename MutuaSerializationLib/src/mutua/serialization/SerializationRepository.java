@@ -68,6 +68,23 @@ public class SerializationRepository {
 		return buffer;
 	}
 	
+	/** Efficiently serializes an int array */
+	public static StringBuffer serialize(StringBuffer buffer, int[] intArray) {
+		if (intArray == null) {
+			buffer.append("NULL");
+			return buffer;
+		}
+		buffer.append('{');
+		for (int i=0; i<intArray.length; i++) {
+			if (i > 0) {
+				buffer.append(',');
+			}
+			buffer.append(intArray[i]);
+		}
+		buffer.append('}');
+		return buffer;
+	}
+	
 	/** Efficiently serializes a string array */
 	public static StringBuffer serialize(StringBuffer buffer, String[] stringArray) {
 		if (stringArray == null) {
@@ -160,6 +177,8 @@ public class SerializationRepository {
 			serialize(buffer, (String[])object);
 		} else if (type == String[][].class) {
 			serialize(buffer, (String[][])object);
+		} else if (type == int[].class) {
+			serialize(buffer, (int[])object);
 		} else if ((type == Integer.TYPE)       || (type == Long.TYPE) ||
 		           (type == Number.class)       || (type == Boolean.class) ||
 		           (type == StringBuffer.class) || (type == Enum.class)) {
@@ -254,6 +273,19 @@ public class SerializationRepository {
 				buffer.append(object);
 			}
 		}
+	}
+
+	/** Efficiently deserializes an int array read from a human-readable string (or produced by {@link #serialize(StringBuffer, int[])}) */
+	public static int[] deserializeIntArray(String serializedIntArray) {
+		if (serializedIntArray.length() <= 2) {
+			return new int[0];
+		}
+		String[] serializedElements = serializedIntArray.substring(1, serializedIntArray.length()-1).split(",");
+		int[] intArray = new int[serializedElements.length];
+		for (int i=0; i<intArray.length; i++) {
+			intArray[i] = Integer.parseInt(serializedElements[i]);
+		}
+		return intArray;
 	}
 
 	/** Efficiently deserializes a string read from a human-readable text file (or produced by {@link #serialize(StringBuffer, String)}) */
