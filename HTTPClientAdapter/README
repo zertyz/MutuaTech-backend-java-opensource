@@ -1,0 +1,4 @@
+
+History:
+Version 1, rev. 83 (26/08/2014)         -- used by SEO up to that date; encapsulates HTTPRequests making them as generic as possible
+Version 2, from rev. 84 (10/09/2014) up -- keeping some compatbility, now the responses are also encapsulated, so we can have a feedback from the headers. The tests now have their own web server.
