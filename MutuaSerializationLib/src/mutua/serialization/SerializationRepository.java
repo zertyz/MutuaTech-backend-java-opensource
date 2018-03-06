@@ -155,9 +155,7 @@ public class SerializationRepository {
 				if (i > 0) {
 					buffer.append(',');
 				}
-				buffer.append('"');
 				invokeSerializationMethod(serializationMethod, buffer, objects[i]);
-				buffer.append('"');
 			}
 			buffer.append('}');
 			return buffer;
