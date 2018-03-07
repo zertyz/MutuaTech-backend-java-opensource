@@ -53,7 +53,7 @@ public abstract class InstrumentationHandlerRAM implements IInstrumentationHandl
 	/** method called just after an application request finishes, passing along the list of instrumentation events raised during this processing.
 	 *  overriddings of this method must not keep the 'requestEvents' object, since there is a weak reference to it (collected when the processing
 	 *  thread dies) and it will be reused for the next request of the same thread.
-	 *  Implementations should summarize the request in one line, giving meaningful names to the important events. */
+	 *  Logging implementations should summarize the request in one line, giving meaningful names to the important events. */
 	public abstract void analyzeRequest(ArrayList<InstrumentationEventDto> requestEvents);
 
 }
