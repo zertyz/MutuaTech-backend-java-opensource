@@ -7,9 +7,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import mutua.icc.instrumentation.Instrumentation;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import adapters.exceptions.PreparedProcedureException;
+import mutua.icc.instrumentation.Instrumentation;
 
 /** <pre>
  * AbstractPreparedProcedure.java  --  $Id: JDBCPreparedProceduresHelper.java,v 1.1 2010/07/01 22:02:14 luiz Exp $
@@ -172,7 +171,7 @@ public class AbstractPreparedProcedure {
 			} else if (sqlStatementBit instanceof Object[]) {
 				preparedProcedureSQL.append(calculatePreparedProcedureSQL((Object[])sqlStatementBit));
 			} else {
-				throw new NotImplementedException();
+				throw new RuntimeException("Not Implemented");
 			}
 		}
 		return preparedProcedureSQL.toString();
