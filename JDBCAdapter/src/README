@@ -1,0 +1,29 @@
+JDBCHelper
+==========
+
+This project belongs to the "helper" family of projects, whose intent is to unify how low-level
+tasks should behave. On the topic: database manipulation.
+
+This JDBC client helper is implemented in a testable, rock solid and easier to use API.
+
+TODO: implement connection pooling.
+	- The EJDBCPoolingStrategies can be "BY_THREAD" and "ROUND_ROBIN"
+	- The interface 'IJDBCConnectionPool' defines the "getConnection" mechanism, and the
+	  underlaying number of connections is managed by the implementations 'ByThreadConnectionPool'
+	  and 'RoundRobinConnectionPool'
+	- These values are set on the JDBCAdapter constructor... although the application final implementation
+	  of PostgreSQL, MySQL, ... may implement their constants
+	- These connections would be easily done by JDBCAdapter instance, although that may create more connections
+	  than really needed. They could be managed by a static structure, who would map the connection url to the
+	  real connection object. The JDBCAdapter might cache the connection URLs, to avoid the price of concatena-
+	  ting the strings from the 'getConnectionURL' method. Don't forget WeakHashMap for the static structure's Thread key
+	- For sanity sake, EJDBCPoolingStrategies may also implement "NO_POOLING", implement by the 'NoPoolingConnectionPool',
+	  which simply hold the Connection object and always return it in response to 'getConnection', as done today.
+
+
+HISTORY:
+=======
+
+This project started as the "MysqlHelper" project in December, 2008 and later (june, 2010), was
+extended to the more general purpose "JDBCHelper" which additionally to providing the 'MySQLHelper'
+class also provided the 'SQLServerHelper' one.

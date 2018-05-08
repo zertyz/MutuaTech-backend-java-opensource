@@ -5,8 +5,8 @@ import java.io.PrintStream;
 
 import mutua.icc.instrumentation.InstrumentableEvent.ELogSeverity;
 
-import org.tukaani.xz.LZMA2Options;
-import org.tukaani.xz.XZOutputStream;
+//import org.tukaani.xz.LZMA2Options;
+//import org.tukaani.xz.XZOutputStream;
 
 /** <pre>
  * InstrumentationHandlerLogRotatoryCompressedFile.java
@@ -39,8 +39,8 @@ public class InstrumentationHandlerLogRotatoryCompressedFile extends Instrumenta
 		PrintStream newOut = null;
 		try {
 			FileOutputStream outFile = new FileOutputStream(fsFilePath, true);
-			XZOutputStream outXZ = new XZOutputStream(outFile, new LZMA2Options());
-			newOut = getPrintStream(outXZ);
+//			XZOutputStream outXZ = new XZOutputStream(outFile, new LZMA2Options());
+//			newOut = getPrintStream(outXZ);
 		} catch (Throwable t) {
 			out.println("Exception while attempting to rotate to a new log file '"+fsFilePath+"'. Aborting rotation.");
 			t.printStackTrace(out);

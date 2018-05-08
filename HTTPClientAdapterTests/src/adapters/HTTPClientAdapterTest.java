@@ -158,7 +158,7 @@ public class HTTPClientAdapterTest {
 		HTTPClientAdapter.configureDefaultValuesForNewInstances(-1, -1, false);	// don't follow the redirection
 		try {
 			String toBeRedirectedURL = "http://google.com";	// will be redirected to http://google.com.br/ throw HTTP 302 Found response
-			String expectedRedirectionPattern = "http://www.google.com.br/.*";
+			String expectedRedirectionPattern = "http://www.google.com/.*";
 			HTTPResponseDto toBeRedirectedResponse = HTTPClientAdapter.requestGet(toBeRedirectedURL, null);
 			List<String> observedRedirections = toBeRedirectedResponse.getHeaders().get("Location");
 			assertNotNull("No redirection detected", observedRedirections);
