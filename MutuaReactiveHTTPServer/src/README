@@ -1,0 +1,8 @@
+Reactive programming is all about scalable, non-blocking, event driven and low latency programming.
+
+This is our version of a Highly Efficient web server, tuned for Angular Frontend + Java Backend connected via
+web sockets.
+
+A good source of info is https://www.oreilly.com/learning/designing-a-reactive-http-server-with-rxjava 
+
+The mentioned Natty & RxNatty & RxJava implementations used there seem to generate a lot of garbage...
