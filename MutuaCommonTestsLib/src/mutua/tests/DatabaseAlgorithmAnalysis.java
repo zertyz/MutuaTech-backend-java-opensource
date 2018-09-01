@@ -147,7 +147,7 @@ public abstract class DatabaseAlgorithmAnalysis {
 		this.numberOfSecondPassDeleteElements = -1;
 		this._perThreadDeletes                = -1;
 		
-		System.err.print(testName + " Algorithm Analisys: "); System.err.flush();
+		System.err.print(testName + " Algorithm Analysis: "); System.err.flush();
 		analyse();
 	}
 	
