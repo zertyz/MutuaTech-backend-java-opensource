@@ -1,0 +1,15 @@
+[submodule "cpp/AlgorithmComplexityAndReentrancyAnalysis"]
+	path = cpp/AlgorithmComplexityAndReentrancyAnalysis
+	url = https://github.com/zertyz/AlgorithmComplexityAndReentrancyAnalysis.git
+[submodule "cpp/SplitRun"]
+	path = cpp/SplitRun
+	url = https://github.com/zertyz/SplitRun.git
+[submodule "cpp/CppUtils"]
+	path = cpp/CppUtils
+	url = https://github.com/zertyz/CppUtils.git
+[submodule "cpp/EASTL"]
+	path = cpp/EASTL
+	url = https://github.com/zertyz/EASTL.git
+[submodule "cpp/HashTableSpikes"]
+	path = cpp/HashTableSpikes
+	url = https://github.com/zertyz/HashTableSpikes.git
